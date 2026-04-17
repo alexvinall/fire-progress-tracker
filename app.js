@@ -19,7 +19,7 @@ function todayStr() {
 }
 function formatDateLabel(s) {
   const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? 'Invalid' : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  return Number.isNaN(d.getTime()) ? 'Invalid' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 function fmtGBPShort(n) {
   if (n >= 1e6) return `£${(n / 1e6).toFixed(2)}M`;
@@ -177,17 +177,19 @@ function drawChart(sorted, hp, target, contrib, growth, monthsToRetire) {
   const u2i = sorted.map((p) => parseFloat(p.u2i) || 0);
   const total = sorted.map((p) => rowTotal(p, hp));
 
-  const projectionQuarters = Math.max(0, Math.ceil(monthsToRetire / 3));
+  const projectionStepMonths = getFreq() === 'yearly' ? 12 : 3;
+  const projectionPoints = Math.max(0, Math.ceil(monthsToRetire / projectionStepMonths));
   let projectedSeries = [];
-  if (sorted.length > 0 && projectionQuarters > 0) {
+  if (sorted.length > 0 && projectionPoints > 0) {
     let running = total[total.length - 1];
-    for (let q = 0; q < projectionQuarters; q += 1) {
-      running = projectValue(running, contrib, growth, 3);
+    for (let i = 0; i < projectionPoints; i += 1) {
+      running = projectValue(running, contrib, growth, projectionStepMonths);
       projectedSeries.push(Math.round(running));
     }
   }
 
-  const projectionLabels = projectedSeries.map((_, i) => `Proj ${i + 1}`);
+  const finalDate = sorted.length ? sorted[sorted.length - 1].date : todayStr();
+  const projectionLabels = projectedSeries.map((_, i) => formatDateLabel(addMonths(finalDate, projectionStepMonths * (i + 1))));
   const allLabels = [...labels, ...projectionLabels];
 
   const datasets = [
