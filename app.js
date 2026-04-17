@@ -124,6 +124,8 @@ function recalc() {
   const target = getNum('target');
   const contrib = getNum('monthlyContrib');
   const growth = getNum('growthRate');
+  const inflationField = document.getElementById('inflationRate').value;
+  const inflation = inflationField === '' ? 3 : getNum('inflationRate');
   const swr = getNum('safeWithdrawal') || 4;
   const u1Age = getAgeFromDob(document.getElementById('u1Dob').value);
   const u2Age = getAgeFromDob(document.getElementById('u2Dob').value);
@@ -134,23 +136,28 @@ function recalc() {
   const u1Years = Math.max(0, getNum('u1RetAge') - u1Age);
   const u2Years = hp ? Math.max(0, getNum('u2RetAge') - u2Age) : Infinity;
   const yearsToRetire = Math.min(u1Years, u2Years);
+  const latestYearsToRetire = hp ? Math.max(u1Years, u2Years) : u1Years;
   const monthsToRetire = Math.round(yearsToRetire * 12);
+  const projectionMonths = Math.round((latestYearsToRetire + 5) * 12);
 
   const sorted = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
   const current = sorted.length ? rowTotal(sorted[sorted.length - 1], hp) : 0;
 
   const projected = monthsToRetire > 0 ? projectValue(current, contrib, growth, monthsToRetire) : current;
   const progressPct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
-  const retirementIncome = (projected * (swr / 100)) / 12;
+  const retirementIncomeNominal = (projected * (swr / 100)) / 12;
+  const inflationFactor = Math.pow(1 + (inflation / 100), yearsToRetire);
+  const retirementIncome = inflationFactor > 0 ? retirementIncomeNominal / inflationFactor : retirementIncomeNominal;
 
   ids.metricsGrid.innerHTML = `
     <article class="metric"><div class="mlabel">Current total</div><div class="mval">${fmtGBP(current)}</div><div class="msub">${progressPct.toFixed(1)}% of target</div></article>
-    <article class="metric"><div class="mlabel">Projected at retirement</div><div class="mval">${fmtGBP(projected)}</div><div class="msub">Based on ${fmtGBP(contrib)}/mo @ ${growth.toFixed(1)}%</div></article>
+    <article class="metric"><div class="mlabel">Projected at retirement</div><div class="mval">${fmtGBP(projected)}</div><div class="msub">Based on ${fmtGBP(contrib)}/mo @ ${growth.toFixed(1)}% growth</div></article>
     <article class="metric"><div class="mlabel">Years to retirement</div><div class="mval">${yearsToRetire.toFixed(1)}</div><div class="msub">Earliest selected retirement age</div></article>
-    <article class="metric"><div class="mlabel">Est. monthly drawdown</div><div class="mval">${fmtGBP(retirementIncome)}</div><div class="msub">Using ${swr.toFixed(1)}% safe withdrawal rate</div></article>
+    <article class="metric"><div class="mlabel">Est. monthly drawdown (today's money)</div><div class="mval">${fmtGBP(retirementIncome)}</div><div class="msub">Using ${swr.toFixed(1)}% safe withdrawal rate and ${inflation.toFixed(1)}% inflation</div></article>
   `;
 
   const shortfall = Math.max(0, target - projected);
+  const surplus = Math.max(0, projected - target);
   const requiredMonthly = yearsToRetire > 0 ? shortfall / (yearsToRetire * 12) : shortfall;
 
   ids.analysisBox.innerHTML = `
@@ -160,16 +167,16 @@ function recalc() {
       <div class="analysis-row"><span>Projected gap</span><strong>${fmtGBP(shortfall)}</strong></div>
       <div class="analysis-row"><span>Needed extra monthly (simple)</span><strong>${fmtGBP(requiredMonthly)}</strong></div>
       ${projected >= target
-        ? `<div class="on-track">✅ You are on track based on the current assumptions.</div>`
-        : `<div class="off-track">⚠️ You may miss your target. Increase contributions or adjust timeline/target.</div>`}
+        ? `<div class="on-track">✅ You are on track based on the current assumptions. Estimated surplus at retirement: <strong>${fmtGBP(surplus)}</strong>.</div>`
+        : `<div class="off-track">⚠️ You may miss your target. Estimated deficit at retirement: <strong>${fmtGBP(shortfall)}</strong>. Increase contributions or adjust timeline/target.</div>`}
     </section>
   `;
 
-  drawChart(sorted, hp, target, contrib, growth, monthsToRetire);
+  drawChart(sorted, hp, target, contrib, growth, projectionMonths);
   persist();
 }
 
-function drawChart(sorted, hp, target, contrib, growth, monthsToRetire) {
+function drawChart(sorted, hp, target, contrib, growth, projectionMonths) {
   const labels = sorted.map((p) => formatDateLabel(p.date));
   const u1p = sorted.map((p) => parseFloat(p.u1p) || 0);
   const u1i = sorted.map((p) => parseFloat(p.u1i) || 0);
@@ -178,7 +185,7 @@ function drawChart(sorted, hp, target, contrib, growth, monthsToRetire) {
   const total = sorted.map((p) => rowTotal(p, hp));
 
   const projectionStepMonths = getFreq() === 'yearly' ? 12 : 3;
-  const projectionPoints = Math.max(0, Math.ceil(monthsToRetire / projectionStepMonths));
+  const projectionPoints = Math.max(0, Math.ceil(projectionMonths / projectionStepMonths));
   let projectedSeries = [];
   if (sorted.length > 0 && projectionPoints > 0) {
     let running = total[total.length - 1];
@@ -249,6 +256,7 @@ function captureFormState() {
       u2RetAge: document.getElementById('u2RetAge').value,
       target: document.getElementById('target').value,
       safeWithdrawal: document.getElementById('safeWithdrawal').value,
+      inflationRate: document.getElementById('inflationRate').value,
       monthlyContrib: document.getElementById('monthlyContrib').value,
       growthRate: document.getElementById('growthRate').value
     },
@@ -269,7 +277,7 @@ function restoreState(state) {
   if (!values.u2Dob && values.u2Age) {
     values.u2Dob = `${new Date().getFullYear() - Number(values.u2Age)}-01-01`;
   }
-  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'].forEach((id) => {
     if (values[id] !== undefined) document.getElementById(id).value = values[id];
   });
 
@@ -357,7 +365,7 @@ function init() {
 
   ids.hasPartner.addEventListener('change', recalc);
   document.querySelectorAll('input[name="freq"]').forEach((r) => r.addEventListener('change', recalc));
-  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'].forEach((id) => {
     document.getElementById(id).addEventListener('input', recalc);
   });
 
