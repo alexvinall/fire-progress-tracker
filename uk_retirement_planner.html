@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FIRE Progress Tracker (UK)</title>
   <meta name="description" content="Track your pension and ISA progress towards financial independence and retirement." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -33,8 +36,8 @@
         <fieldset>
           <legend>Data frequency</legend>
           <div class="radio-row">
-            <label><input type="radio" name="freq" value="quarterly" checked /> Quarterly</label>
-            <label><input type="radio" name="freq" value="yearly" /> Yearly</label>
+            <label class="radio-option"><input type="radio" name="freq" value="quarterly" checked /><span>Quarterly</span></label>
+            <label class="radio-option"><input type="radio" name="freq" value="yearly" /><span>Yearly</span></label>
           </div>
         </fieldset>
 
