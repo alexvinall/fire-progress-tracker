@@ -1,460 +1,142 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FIRE Progress Tracker (UK)</title>
+  <meta name="description" content="Track your pension and ISA progress towards financial independence and retirement." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page" aria-labelledby="app-title">
+    <header class="header card">
+      <h1 id="app-title">🔥 FIRE Progress Tracker</h1>
+      <p>Track your pension and Stocks &amp; Shares ISA progress towards your retirement target.</p>
+    </header>
 
-<h2 class="sr-only">UK Retirement Planner — track pension and ISA progress towards your retirement goal</h2>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary)}
-.page{max-width:900px;margin:0 auto;padding:1.5rem 1rem}
-.header{text-align:center;margin-bottom:2rem}
-.header h1{font-size:22px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px}
-.header p{font-size:13px;color:var(--color-text-secondary);max-width:500px;margin:0 auto}
-.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:1.25rem}
-.section-title{font-size:15px;font-weight:500;margin-bottom:4px}
-.section-sub{font-size:12px;color:var(--color-text-secondary);margin-bottom:1rem}
-.row{display:flex;gap:1rem;flex-wrap:wrap;align-items:center}
-.row-between{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:1rem}
-.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px}
-.field label{font-size:12px;color:var(--color-text-secondary)}
-.field input{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 10px;font-size:13px;background:var(--color-background-secondary);color:var(--color-text-primary);width:100%}
-.field input:focus{outline:none;box-shadow:0 0 0 2px var(--color-border-info)}
-.toggle-row{display:flex;align-items:center;gap:8px}
-.toggle-row label{font-size:13px;color:var(--color-text-secondary)}
-.switch{position:relative;display:inline-block;width:36px;height:20px}
-.switch input{opacity:0;width:0;height:0}
-.slider-sw{position:absolute;inset:0;background:#cbced4;border-radius:20px;transition:.2s;cursor:pointer}
-.slider-sw:before{content:"";position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
-input:checked+.slider-sw{background:#030213}
-input:checked+.slider-sw:before{transform:translateX(16px)}
-.radio-row{display:flex;gap:1.5rem}
-.radio-row label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px}
-.metric .mlabel{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
-.metric .mval{font-size:20px;font-weight:500}
-.metric .msub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
-.analysis{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:1rem;margin-top:1rem}
-.analysis-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
-.analysis-row span:first-child{color:var(--color-text-secondary)}
-.on-track{background:var(--color-background-success);border:0.5px solid var(--color-border-success);border-radius:var(--border-radius-md);padding:10px 12px;margin-top:10px;font-size:12px;color:var(--color-text-success)}
-.off-track{background:var(--color-background-warning);border:0.5px solid var(--color-border-warning);border-radius:var(--border-radius-md);padding:10px 12px;margin-top:10px;font-size:12px;color:var(--color-text-warning)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead th{text-align:left;padding:8px 10px;font-weight:500;background:var(--color-background-secondary);font-size:12px}
-tbody tr{border-top:0.5px solid var(--color-border-tertiary)}
-tbody tr:hover{background:var(--color-background-secondary)}
-tbody td{padding:6px 8px}
-tbody td input{border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:4px 6px;font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);width:100%}
-.btn{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 12px;background:transparent;color:var(--color-text-primary);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px}
-.btn:hover{background:var(--color-background-secondary)}
-.btn-sm{padding:4px 8px;font-size:12px}
-.btn-danger{color:var(--color-text-danger);border-color:var(--color-border-danger)}
-.divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:1rem 0}
-.chart-wrap{position:relative;height:340px;margin-top:1rem}
-.footer{text-align:center;font-size:11px;color:var(--color-text-tertiary);margin-top:1.5rem}
-@media(max-width:600px){.grid4{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
-</style>
-
-<div class="page">
-  <div class="header">
-    <h1>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      UK Retirement Planner
-    </h1>
-    <p>Track your defined contribution pension and Stocks &amp; Shares ISA progress towards retirement.</p>
-  </div>
-
-  <div class="card">
-    <div class="row-between">
-      <div>
-        <div class="section-title">Planning mode</div>
-        <div class="section-sub">Track retirement for one person or with a partner</div>
-      </div>
-      <div class="toggle-row">
-        <label style="font-size:13px;color:var(--color-text-secondary)">Include partner</label>
-        <label class="switch"><input type="checkbox" id="hasPartner"><span class="slider-sw"></span></label>
-      </div>
-    </div>
-
-    <div style="margin-bottom:12px">
-      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px">Data frequency</div>
-      <div class="radio-row">
-        <label><input type="radio" name="freq" value="quarterly" checked> Quarterly</label>
-        <label><input type="radio" name="freq" value="yearly"> Yearly</label>
-      </div>
-    </div>
-
-    <div class="grid2" id="ageGrid">
-      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:10px">You</div>
-        <div class="row">
-          <div class="field"><label>Current age</label><input type="number" id="u1Age" value="35" min="18" max="100"></div>
-          <div class="field"><label>Retirement age</label><input type="number" id="u1RetAge" value="65" min="55" max="100"></div>
+    <section class="card" aria-labelledby="planning-title">
+      <div class="row-between">
+        <div>
+          <h2 id="planning-title" class="section-title">Planning mode</h2>
+          <p class="section-sub">Track your plan for one person or with a partner.</p>
+        </div>
+        <div class="toggle-row">
+          <label for="hasPartner">Include partner</label>
+          <label class="switch" aria-label="Include partner">
+            <input type="checkbox" id="hasPartner" />
+            <span class="slider-sw"></span>
+          </label>
         </div>
       </div>
-      <div id="partnerBox" style="display:none;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:10px">Partner</div>
-        <div class="row">
-          <div class="field"><label>Current age</label><input type="number" id="u2Age" value="33" min="18" max="100"></div>
-          <div class="field"><label>Retirement age</label><input type="number" id="u2RetAge" value="65" min="55" max="100"></div>
+
+      <div class="settings-row">
+        <fieldset>
+          <legend>Data frequency</legend>
+          <div class="radio-row">
+            <label><input type="radio" name="freq" value="quarterly" checked /> Quarterly</label>
+            <label><input type="radio" name="freq" value="yearly" /> Yearly</label>
+          </div>
+        </fieldset>
+
+        <button class="btn btn-muted" id="seedDataBtn" type="button">Use sample data</button>
+      </div>
+
+      <div class="grid2" id="ageGrid">
+        <div class="panel">
+          <h3>You</h3>
+          <div class="row">
+            <div class="field"><label for="u1Age">Current age</label><input type="number" id="u1Age" value="35" min="18" max="100" /></div>
+            <div class="field"><label for="u1RetAge">Retirement age</label><input type="number" id="u1RetAge" value="60" min="40" max="100" /></div>
+          </div>
+        </div>
+
+        <div id="partnerBox" class="panel hidden">
+          <h3>Partner</h3>
+          <div class="row">
+            <div class="field"><label for="u2Age">Current age</label><input type="number" id="u2Age" value="33" min="18" max="100" /></div>
+            <div class="field"><label for="u2RetAge">Retirement age</label><input type="number" id="u2RetAge" value="60" min="40" max="100" /></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="field" style="margin-top:1rem;max-width:280px">
-      <label>Target retirement fund (£)</label>
-      <input type="number" id="target" value="1000000" min="0" step="1000">
-    </div>
-
-    <hr class="divider">
-    <div style="font-size:14px;font-weight:500;margin-bottom:4px">Growth projections</div>
-    <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px">Project your future fund based on expected contributions and growth</div>
-    <div class="grid2">
-      <div class="field">
-        <label>Monthly contribution (£)</label>
-        <input type="number" id="monthlyContrib" value="" min="0" step="50" placeholder="e.g. 1000">
-        <span style="font-size:11px;color:var(--color-text-tertiary)">Combined pension + ISA contributions</span>
+      <div class="grid2 mt-md">
+        <div class="field"><label for="target">Target retirement fund (£)</label><input type="number" id="target" value="1000000" min="0" step="1000" /></div>
+        <div class="field"><label for="safeWithdrawal">Safe withdrawal rate (%)</label><input type="number" id="safeWithdrawal" value="4" min="1" max="10" step="0.1" /></div>
       </div>
-      <div class="field">
-        <label>Expected annual growth (%)</label>
-        <input type="number" id="growthRate" value="" min="0" max="20" step="0.1" placeholder="e.g. 5">
-        <span style="font-size:11px;color:var(--color-text-tertiary)">Expected yearly investment return</span>
+
+      <hr class="divider" />
+
+      <h3 class="section-title">Projection assumptions</h3>
+      <p class="section-sub">Estimate your future value based on contributions and annual growth.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="monthlyContrib">Monthly contribution (£)</label>
+          <input type="number" id="monthlyContrib" value="1500" min="0" step="50" />
+          <span class="hint">Combined pension + ISA contributions.</span>
+        </div>
+        <div class="field">
+          <label for="growthRate">Expected annual growth (%)</label>
+          <input type="number" id="growthRate" value="5" min="0" max="20" step="0.1" />
+          <span class="hint">Long-term average before inflation.</span>
+        </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="card">
-    <div class="row-between">
-      <div>
-        <div class="section-title">Fund values over time</div>
-        <div class="section-sub">Enter your pension and ISA values at different points in time</div>
+    <section class="card" aria-labelledby="values-title">
+      <div class="row-between">
+        <div>
+          <h2 id="values-title" class="section-title">Fund values over time</h2>
+          <p class="section-sub">Add snapshots of your pension and ISA balances.</p>
+        </div>
+        <button class="btn" id="addDataBtn" type="button">+ Add data point</button>
       </div>
-      <button class="btn btn-sm" onclick="addDataPoint()">+ Add data point</button>
-    </div>
-    <div style="overflow-x:auto">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Your pension</th>
-            <th>Your ISA</th>
-            <th id="th-p2pension" style="display:none">Partner pension</th>
-            <th id="th-p2isa" style="display:none">Partner ISA</th>
-            <th>Total</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="dataTable"></tbody>
-      </table>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="section-title">Progress visualisation</div>
-    <div class="chart-wrap"><canvas id="retChart"></canvas></div>
-  </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Your pension</th>
+              <th>Your ISA</th>
+              <th id="th-p2pension" class="hidden">Partner pension</th>
+              <th id="th-p2isa" class="hidden">Partner ISA</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dataTable"></tbody>
+        </table>
+      </div>
+    </section>
 
-  <div class="card" id="projCard">
-    <div class="section-title">Retirement projections</div>
-    <div class="grid4" id="metricsGrid" style="margin-top:1rem"></div>
-    <div id="analysisBox"></div>
-  </div>
+    <section class="card" aria-labelledby="chart-title">
+      <h2 id="chart-title" class="section-title">Progress visualisation</h2>
+      <div class="chart-wrap"><canvas id="retChart"></canvas></div>
+    </section>
 
-  <div class="card">
-    <div class="section-title">Save &amp; load your plan</div>
-    <div class="section-sub">Export your retirement plan to save it, or import a previously saved plan</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="exportPlan()">↓ Export plan</button>
-      <button class="btn" onclick="document.getElementById('fileIn').click()">↑ Import plan</button>
-      <input type="file" id="fileIn" accept=".json" style="display:none" onchange="importPlan(event)">
-    </div>
-  </div>
+    <section class="card" aria-labelledby="projection-title">
+      <h2 id="projection-title" class="section-title">Retirement projections</h2>
+      <div class="grid4" id="metricsGrid"></div>
+      <div id="analysisBox"></div>
+    </section>
 
-  <div class="footer">
-    <p>This calculator is for illustration purposes only. Past performance is not indicative of future results.</p>
-    <p>Please consult a qualified financial advisor for personalised retirement planning advice.</p>
-  </div>
-</div>
+    <section class="card" aria-labelledby="save-title">
+      <h2 id="save-title" class="section-title">Save &amp; load your plan</h2>
+      <p class="section-sub">Export your plan as JSON or import a previous file. Autosave is enabled in your browser.</p>
+      <div class="actions">
+        <button class="btn" id="exportBtn" type="button">↓ Export plan</button>
+        <button class="btn" id="importBtn" type="button">↑ Import plan</button>
+        <button class="btn btn-muted" id="resetBtn" type="button">Reset plan</button>
+        <input type="file" id="fileIn" accept=".json" class="hidden" />
+      </div>
+    </section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-let dataPoints = [{id:Date.now(),date:todayStr(),u1p:'',u1i:'',u2p:'',u2i:''}];
-let chart = null;
+    <footer class="footer">
+      <p>For educational use only — not financial advice.</p>
+    </footer>
+  </main>
 
-function todayStr(){const d=new Date();return d.toISOString().split('T')[0]}
-function fmtDate(s){const d=new Date(s);return d.toLocaleDateString('en-GB',{month:'short',year:'numeric'})}
-function fmtGBP(n){if(n>=1e6)return'£'+(n/1e6).toFixed(2)+'M';if(n>=1000)return'£'+(n/1000).toFixed(0)+'k';return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',minimumFractionDigits:0,maximumFractionDigits:0}).format(n)}
-function fmtFull(n){return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',minimumFractionDigits:0,maximumFractionDigits:0}).format(n)}
-function addMonths(d,m){const dt=new Date(d);dt.setMonth(dt.getMonth()+m);return dt.toISOString().split('T')[0]}
-function addYears(d,y){const dt=new Date(d);dt.setFullYear(dt.getFullYear()+y);return dt.toISOString().split('T')[0]}
-function getFreq(){return document.querySelector('input[name="freq"]:checked').value}
-function hasPartner(){return document.getElementById('hasPartner').checked}
-
-function renderTable(){
-  const hp=hasPartner();
-  document.getElementById('th-p2pension').style.display=hp?'':'none';
-  document.getElementById('th-p2isa').style.display=hp?'':'none';
-  const tbody=document.getElementById('dataTable');
-  tbody.innerHTML='';
-  dataPoints.forEach(p=>{
-    const u1p=parseFloat(p.u1p)||0,u1i=parseFloat(p.u1i)||0,u2p=parseFloat(p.u2p)||0,u2i=parseFloat(p.u2i)||0;
-    const total=u1p+u1i+(hp?u2p+u2i:0);
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td><input type="date" value="${p.date}" onchange="updatePoint('${p.id}','date',this.value)" style="width:130px"></td>
-      <td><input type="number" value="${p.u1p}" placeholder="£0" min="0" step="100" onchange="updatePoint('${p.id}','u1p',this.value)" style="width:110px"></td>
-      <td><input type="number" value="${p.u1i}" placeholder="£0" min="0" step="100" onchange="updatePoint('${p.id}','u1i',this.value)" style="width:110px"></td>
-      ${hp?`<td><input type="number" value="${p.u2p}" placeholder="£0" min="0" step="100" onchange="updatePoint('${p.id}','u2p',this.value)" style="width:110px"></td><td><input type="number" value="${p.u2i}" placeholder="£0" min="0" step="100" onchange="updatePoint('${p.id}','u2i',this.value)" style="width:110px"></td>`:''}
-      <td style="font-weight:500">${fmtFull(total)}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="removePoint('${p.id}')" ${dataPoints.length===1?'disabled':''}>✕</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function updatePoint(id,field,val){
-  const p=dataPoints.find(x=>x.id==id);
-  if(p){p[field]=val;recalc()}
-}
-function addDataPoint(){
-  const sorted=[...dataPoints].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const last=sorted[0]?.date||todayStr();
-  const freq=getFreq();
-  const newDate=freq==='quarterly'?addMonths(last,3):addYears(last,1);
-  dataPoints.push({id:Date.now(),date:newDate,u1p:'',u1i:'',u2p:'',u2i:''});
-  renderTable();recalc();
-}
-function removePoint(id){
-  if(dataPoints.length<=1)return;
-  dataPoints=dataPoints.filter(x=>x.id!=id);
-  renderTable();recalc();
-}
-
-function recalc(){
-  renderTable();
-  const hp=hasPartner();
-  const u1Age=parseFloat(document.getElementById('u1Age').value)||0;
-  const u1Ret=parseFloat(document.getElementById('u1RetAge').value)||0;
-  const u2Age=parseFloat(document.getElementById('u2Age').value)||0;
-  const u2Ret=parseFloat(document.getElementById('u2RetAge').value)||0;
-  const target=parseFloat(document.getElementById('target').value)||0;
-  const contrib=parseFloat(document.getElementById('monthlyContrib').value)||0;
-  const growth=parseFloat(document.getElementById('growthRate').value)||0;
-
-  const ytr1=u1Ret-u1Age;
-  const ytr2=hp?u2Ret-u2Age:Infinity;
-  const ytr=Math.min(ytr1,ytr2);
-
-  const retDate=ytr>0?addYears(todayStr(),ytr):null;
-
-  const sorted=[...dataPoints].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const latest=sorted[sorted.length-1];
-  const u1p=parseFloat(latest?.u1p)||0,u1i=parseFloat(latest?.u1i)||0;
-  const u2p=parseFloat(latest?.u2p)||0,u2i=parseFloat(latest?.u2i)||0;
-  const current=u1p+u1i+(hp?u2p+u2i:0);
-
-  const prog=target>0?Math.min((current/target)*100,100):0;
-  let projected=0;
-  if(contrib>0&&growth>0&&ytr>0&&latest){
-    const mr=growth/100/12;
-    const mRet=Math.round((new Date(retDate)-new Date(latest.date))/(1000*60*60*24*30));
-    let v=current;
-    for(let i=0;i<mRet;i++){
-      const d=addMonths(latest.date,i+1);
-      v=v*(1+mr)+(d<=retDate?contrib:0);
-    }
-    projected=v;
-  }else if(dataPoints.length>=2){
-    const first=sorted[0];
-    const ft=(parseFloat(first.u1p)||0)+(parseFloat(first.u1i)||0)+(hp?(parseFloat(first.u2p)||0)+(parseFloat(first.u2i)||0):0);
-    const lt=current;
-    const yd=(new Date(latest.date)-new Date(first.date))/(1000*60*60*24*365.25);
-    if(yd>0&&ft>0){
-      const hr=((lt-ft)/ft)*(1/yd)*100;
-      if(hr>0)projected=current*Math.pow(1+hr/100,ytr);
-    }
-  }
-
-  let histRate=0;
-  if(dataPoints.length>=2){
-    const first=sorted[0];
-    const ft=(parseFloat(first.u1p)||0)+(parseFloat(first.u1i)||0)+(hp?(parseFloat(first.u2p)||0)+(parseFloat(first.u2i)||0):0);
-    const yd=(new Date(latest.date)-new Date(first.date))/(1000*60*60*24*365.25);
-    if(yd>0&&ft>0)histRate=((current-ft)/ft)*(1/yd)*100;
-  }
-
-  const dispRate=growth>0?growth:histRate;
-
-  const metrics=document.getElementById('metricsGrid');
-  metrics.innerHTML=`
-    <div class="metric"><div class="mlabel">Current total</div><div class="mval" style="color:#185FA5">${fmtFull(current)}</div></div>
-    <div class="metric"><div class="mlabel">Target amount</div><div class="mval" style="color:#534AB7">${fmtFull(target)}</div><div class="msub">${prog.toFixed(1)}% of target</div></div>
-    <div class="metric"><div class="mlabel">Retirement date</div><div class="mval" style="color:#3B6D11">${retDate?new Date(retDate).getFullYear():'N/A'}</div><div class="msub">${ytr>0?Math.round(ytr)+' years away':'Retired'}</div></div>
-    <div class="metric"><div class="mlabel">Growth rate</div><div class="mval" style="color:#BA7517">${dispRate>0?dispRate.toFixed(1)+'%':'N/A'}</div><div class="msub">${growth>0?'Expected annual':'Historical annual'}</div></div>
-  `;
-
-  const ab=document.getElementById('analysisBox');
-  const req=target-current;
-  if(ytr>0&&req>0){
-    const avgNeed=req/ytr;
-    let html=`<div class="analysis">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px">Analysis</div>
-      <div class="analysis-row"><span>Remaining to target:</span><span style="font-weight:500">${fmtFull(req)}</span></div>`;
-    if(contrib>0&&growth>0){
-      html+=`<div class="analysis-row"><span>Monthly contribution:</span><span style="font-weight:500">${fmtFull(contrib)}</span></div>`;
-    }else{
-      html+=`<div class="analysis-row"><span>Average annual growth needed:</span><span style="font-weight:500">${fmtFull(avgNeed)}/year</span></div>`;
-    }
-    if(projected>0){
-      html+=`<hr style="border:none;border-top:0.5px solid var(--color-border-tertiary);margin:8px 0">
-        <div class="analysis-row"><span>Projected value at retirement:</span><span style="font-weight:500;color:#BA7517">${fmtFull(projected)}</span></div>`;
-      if(contrib>0&&growth>0){
-        html+=`<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">Based on ${fmtFull(contrib)}/month at ${growth}% growth</div>`;
-      }
-      if(projected>=target){
-        html+=`<div class="on-track">✓ On track to meet your target! Projected to exceed by ${fmtFull(projected-target)}.</div>`;
-      }else{
-        html+=`<div class="off-track">⚠ May fall short. Projected shortfall: ${fmtFull(target-projected)}.</div>`;
-      }
-    }
-    html+='</div>';
-    ab.innerHTML=html;
-  }else{ab.innerHTML=''}
-
-  drawChart(sorted,hp,target,contrib,growth,retDate,projected);
-}
-
-function drawChart(sorted,hp,target,contrib,growth,retDate,projected){
-  const isDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const gridColor=isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.07)';
-  const textColor=isDark?'#aaa':'#666';
-
-  const labels=sorted.map(p=>fmtDate(p.date));
-  const u1pData=sorted.map(p=>parseFloat(p.u1p)||0);
-  const u1iData=sorted.map(p=>parseFloat(p.u1i)||0);
-  const u2pData=sorted.map(p=>parseFloat(p.u2p)||0);
-  const u2iData=sorted.map(p=>parseFloat(p.u2i)||0);
-  const totalData=sorted.map((_,i)=>u1pData[i]+u1iData[i]+(hp?u2pData[i]+u2iData[i]:0));
-  const targetData=target>0?sorted.map(()=>target):[];
-
-  let projLabels=[],projData=[];
-  if(sorted.length>0&&contrib>0&&growth>0&&retDate){
-    const last=sorted[sorted.length-1];
-    const lastTotal=totalData[totalData.length-1];
-    const mr=growth/100/12;
-    let v=lastTotal;
-    let cur=last.date;
-    const end=addYears(retDate,5);
-    while(cur<end){
-      cur=addMonths(cur,3);
-      let step=cur;
-      for(let m=0;m<3;m++){
-        const d=addMonths(addMonths(last.date,projData.length*3),m+1);
-        v=v*(1+mr)+(d<=retDate?contrib:0);
-      }
-      projLabels.push(fmtDate(cur));
-      projData.push(Math.round(v));
-      if(cur>addMonths(end,1))break;
-    }
-  }
-
-  const allLabels=[...labels,...projLabels];
-
-  const datasets=[
-    {label:'Your pension',data:[...u1pData,...Array(projLabels.length).fill(null)],borderColor:'#378ADD',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.2,spanGaps:false},
-    {label:'Your ISA',data:[...u1iData,...Array(projLabels.length).fill(null)],borderColor:'#534AB7',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.2,spanGaps:false},
-  ];
-  if(hp){
-    datasets.push({label:'Partner pension',data:[...u2pData,...Array(projLabels.length).fill(null)],borderColor:'#0F6E56',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.2,spanGaps:false});
-    datasets.push({label:'Partner ISA',data:[...u2iData,...Array(projLabels.length).fill(null)],borderColor:'#D85A30',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.2,spanGaps:false});
-  }
-  datasets.push({label:'Total',data:[...totalData,...Array(projLabels.length).fill(null)],borderColor:'#3B6D11',backgroundColor:'transparent',borderWidth:3,pointRadius:5,tension:0.2,spanGaps:false});
-  if(projData.length>0){
-    const conn=[...Array(labels.length-1).fill(null),totalData[totalData.length-1],...projData];
-    datasets.push({label:'Projected total',data:conn,borderColor:'#EF9F27',backgroundColor:'transparent',borderWidth:3,borderDash:[8,4],pointRadius:3,tension:0.2,spanGaps:false});
-  }
-  if(target>0){
-    datasets.push({label:'Target',data:Array(allLabels.length).fill(target),borderColor:'#E24B4A',backgroundColor:'transparent',borderWidth:2,borderDash:[5,5],pointRadius:0,spanGaps:false});
-  }
-
-  const ctx=document.getElementById('retChart').getContext('2d');
-  if(chart)chart.destroy();
-  chart=new Chart(ctx,{
-    type:'line',
-    data:{labels:allLabels,datasets},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{position:'bottom',labels:{boxWidth:12,font:{size:11},color:textColor}},
-        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}`}}
-      },
-      scales:{
-        x:{ticks:{color:textColor,font:{size:11},maxTicksLimit:8,maxRotation:45},grid:{color:gridColor}},
-        y:{ticks:{color:textColor,font:{size:11},callback:v=>fmtGBP(v)},grid:{color:gridColor}}
-      }
-    }
-  });
-
-  if(retDate&&projData.length>0){
-    const retLabel=fmtDate(retDate);
-    const retIdx=allLabels.findIndex(l=>l===retLabel);
-    if(retIdx>=0){
-      chart.options.plugins.annotation={annotations:{retirement:{type:'line',xMin:retIdx,xMax:retIdx,borderColor:'#3B6D11',borderWidth:2,borderDash:[4,4],label:{display:true,content:'Retirement',position:'start',font:{size:10},color:'#3B6D11'}}}};
-      chart.update();
-    }
-  }
-}
-
-function exportPlan(){
-  const data={version:'1.0',hasPartner:hasPartner(),frequency:getFreq(),
-    u1CurrentAge:document.getElementById('u1Age').value,u1RetirementAge:document.getElementById('u1RetAge').value,
-    u2CurrentAge:document.getElementById('u2Age').value,u2RetirementAge:document.getElementById('u2RetAge').value,
-    targetAmount:document.getElementById('target').value,
-    monthlyContribution:document.getElementById('monthlyContrib').value,
-    yearlyGrowthRate:document.getElementById('growthRate').value,
-    dataPoints:dataPoints.map(p=>({...p,date:new Date(p.date).toISOString()}))};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;
-  a.download=`retirement-plan-${todayStr()}.json`;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function importPlan(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const d=JSON.parse(ev.target.result);
-      if(!d.version||!d.dataPoints){alert('Invalid file format.');return;}
-      document.getElementById('hasPartner').checked=d.hasPartner;
-      document.querySelector(`input[name="freq"][value="${d.frequency}"]`).checked=true;
-      document.getElementById('u1Age').value=d.u1CurrentAge||'';
-      document.getElementById('u1RetAge').value=d.u1RetirementAge||'';
-      document.getElementById('u2Age').value=d.u2CurrentAge||'';
-      document.getElementById('u2RetAge').value=d.u2RetirementAge||'';
-      document.getElementById('target').value=d.targetAmount||'';
-      document.getElementById('monthlyContrib').value=d.monthlyContribution||'';
-      document.getElementById('growthRate').value=d.yearlyGrowthRate||'';
-      dataPoints=d.dataPoints.map(p=>({...p,date:new Date(p.date).toISOString().split('T')[0]}));
-      togglePartner();recalc();
-    }catch(err){alert('Error reading file. Please ensure it is a valid JSON file.');}
-  };
-  reader.readAsText(file);
-  e.target.value='';
-}
-
-function togglePartner(){
-  const hp=hasPartner();
-  document.getElementById('partnerBox').style.display=hp?'':'none';
-  recalc();
-}
-
-document.getElementById('hasPartner').addEventListener('change',togglePartner);
-document.querySelectorAll('input[name="freq"]').forEach(r=>r.addEventListener('change',recalc));
-['u1Age','u1RetAge','u2Age','u2RetAge','target','monthlyContrib','growthRate'].forEach(id=>{
-  document.getElementById(id).addEventListener('input',recalc);
-});
-
-recalc();
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
