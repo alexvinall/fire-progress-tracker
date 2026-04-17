@@ -38,6 +38,17 @@ function getFreq() {
 function getNum(id) {
   return Number.parseFloat(document.getElementById(id).value) || 0;
 }
+function getAgeFromDob(dobStr) {
+  if (!dobStr) return 0;
+  const dob = new Date(dobStr);
+  if (Number.isNaN(dob.getTime())) return 0;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const monthDiff = now.getMonth() - dob.getMonth();
+  const hasBirthdayPassed = monthDiff > 0 || (monthDiff === 0 && now.getDate() >= dob.getDate());
+  if (!hasBirthdayPassed) age -= 1;
+  return Math.max(0, age);
+}
 function addMonths(dateStr, months) {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + months);
@@ -114,9 +125,14 @@ function recalc() {
   const contrib = getNum('monthlyContrib');
   const growth = getNum('growthRate');
   const swr = getNum('safeWithdrawal') || 4;
+  const u1Age = getAgeFromDob(document.getElementById('u1Dob').value);
+  const u2Age = getAgeFromDob(document.getElementById('u2Dob').value);
 
-  const u1Years = Math.max(0, getNum('u1RetAge') - getNum('u1Age'));
-  const u2Years = hp ? Math.max(0, getNum('u2RetAge') - getNum('u2Age')) : Infinity;
+  document.getElementById('u1AgeDisplay').textContent = `Current age: ${u1Age}`;
+  document.getElementById('u2AgeDisplay').textContent = `Current age: ${u2Age}`;
+
+  const u1Years = Math.max(0, getNum('u1RetAge') - u1Age);
+  const u2Years = hp ? Math.max(0, getNum('u2RetAge') - u2Age) : Infinity;
   const yearsToRetire = Math.min(u1Years, u2Years);
   const monthsToRetire = Math.round(yearsToRetire * 12);
 
@@ -225,9 +241,9 @@ function captureFormState() {
     hasPartner: ids.hasPartner.checked,
     frequency: getFreq(),
     values: {
-      u1Age: document.getElementById('u1Age').value,
+      u1Dob: document.getElementById('u1Dob').value,
       u1RetAge: document.getElementById('u1RetAge').value,
-      u2Age: document.getElementById('u2Age').value,
+      u2Dob: document.getElementById('u2Dob').value,
       u2RetAge: document.getElementById('u2RetAge').value,
       target: document.getElementById('target').value,
       safeWithdrawal: document.getElementById('safeWithdrawal').value,
@@ -245,7 +261,13 @@ function restoreState(state) {
   if (freqInput) freqInput.checked = true;
 
   const values = state.values || {};
-  ['u1Age', 'u1RetAge', 'u2Age', 'u2RetAge', 'target', 'safeWithdrawal', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  if (!values.u1Dob && values.u1Age) {
+    values.u1Dob = `${new Date().getFullYear() - Number(values.u1Age)}-01-01`;
+  }
+  if (!values.u2Dob && values.u2Age) {
+    values.u2Dob = `${new Date().getFullYear() - Number(values.u2Age)}-01-01`;
+  }
+  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'monthlyContrib', 'growthRate'].forEach((id) => {
     if (values[id] !== undefined) document.getElementById(id).value = values[id];
   });
 
@@ -333,7 +355,7 @@ function init() {
 
   ids.hasPartner.addEventListener('change', recalc);
   document.querySelectorAll('input[name="freq"]').forEach((r) => r.addEventListener('change', recalc));
-  ['u1Age', 'u1RetAge', 'u2Age', 'u2RetAge', 'target', 'safeWithdrawal', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'monthlyContrib', 'growthRate'].forEach((id) => {
     document.getElementById(id).addEventListener('input', recalc);
   });
 
