@@ -19,7 +19,6 @@ Then open:
 ## Features
 
 - Single or partner planning mode
-- Birthday-based age calculation (you + partner)
 - Quarterly/yearly data point entry
 - Progress chart with Chart.js
 - Retirement projection assumptions (growth + monthly contributions)
