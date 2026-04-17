@@ -83,27 +83,59 @@ function removePoint(id) {
   recalc();
 }
 
+function makeCell(child) {
+  const td = document.createElement('td');
+  td.appendChild(child);
+  return td;
+}
+
+function makeInputCell(type, value, field, pointId, extraAttrs = {}) {
+  const input = document.createElement('input');
+  input.type = type;
+  input.value = value ?? '';
+  for (const [k, v] of Object.entries(extraAttrs)) {
+    input.setAttribute(k, v);
+  }
+  input.addEventListener('change', (e) => updatePoint(pointId, field, e.target.value));
+  return makeCell(input);
+}
+
 function renderTable() {
   const hp = hasPartner();
   ids.thP2Pension.classList.toggle('hidden', !hp);
   ids.thP2Isa.classList.toggle('hidden', !hp);
   ids.partnerBox.classList.toggle('hidden', !hp);
 
-  ids.dataTable.innerHTML = '';
+  ids.dataTable.replaceChildren();
 
   dataPoints
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .forEach((p) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="date" value="${p.date}" onchange="updatePoint('${p.id}', 'date', this.value)"></td>
-        <td><input type="number" value="${p.u1p}" min="0" step="100" placeholder="0" onchange="updatePoint('${p.id}', 'u1p', this.value)"></td>
-        <td><input type="number" value="${p.u1i}" min="0" step="100" placeholder="0" onchange="updatePoint('${p.id}', 'u1i', this.value)"></td>
-        ${hp ? `<td><input type="number" value="${p.u2p}" min="0" step="100" placeholder="0" onchange="updatePoint('${p.id}', 'u2p', this.value)"></td>
-               <td><input type="number" value="${p.u2i}" min="0" step="100" placeholder="0" onchange="updatePoint('${p.id}', 'u2i', this.value)"></td>` : ''}
-        <td><strong>${fmtGBP(rowTotal(p, hp))}</strong></td>
-        <td><button class="btn btn-danger" ${dataPoints.length <= 1 ? 'disabled' : ''} onclick="removePoint('${p.id}')">✕</button></td>
-      `;
+      const numAttrs = { min: '0', step: '100', placeholder: '0' };
+
+      tr.appendChild(makeInputCell('date', p.date, 'date', p.id));
+      tr.appendChild(makeInputCell('number', p.u1p, 'u1p', p.id, numAttrs));
+      tr.appendChild(makeInputCell('number', p.u1i, 'u1i', p.id, numAttrs));
+      if (hp) {
+        tr.appendChild(makeInputCell('number', p.u2p, 'u2p', p.id, numAttrs));
+        tr.appendChild(makeInputCell('number', p.u2i, 'u2i', p.id, numAttrs));
+      }
+
+      const totalTd = document.createElement('td');
+      const strong = document.createElement('strong');
+      strong.textContent = fmtGBP(rowTotal(p, hp));
+      totalTd.appendChild(strong);
+      tr.appendChild(totalTd);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn-danger';
+      removeBtn.type = 'button';
+      removeBtn.textContent = '\u2715';
+      if (dataPoints.length <= 1) removeBtn.disabled = true;
+      removeBtn.addEventListener('click', () => removePoint(p.id));
+      tr.appendChild(makeCell(removeBtn));
+
       ids.dataTable.appendChild(tr);
     });
 }
@@ -264,33 +296,80 @@ function captureFormState() {
   };
 }
 
-function restoreState(state) {
-  if (!state || !Array.isArray(state.dataPoints)) return false;
-  ids.hasPartner.checked = Boolean(state.hasPartner);
-  const freqInput = document.querySelector(`input[name="freq"][value="${state.frequency}"]`);
-  if (freqInput) freqInput.checked = true;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const ALLOWED_FREQS = new Set(['quarterly', 'yearly']);
+const STATE_INPUT_IDS = ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'];
 
-  const values = state.values || {};
+function sanitizeDate(value) {
+  if (typeof value !== 'string' || !ISO_DATE_RE.test(value)) return todayStr();
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? todayStr() : value;
+}
+
+function sanitizeAmount(value) {
+  if (value === '' || value === null || value === undefined) return '';
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return '';
+  // Cap to a reasonable upper bound to avoid overflow / DoS-ish values.
+  return String(Math.min(n, 1e12));
+}
+
+function sanitizeId(value) {
+  return typeof value === 'string' && SAFE_ID_RE.test(value)
+    ? value
+    : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+function sanitizeInputValue(id, value) {
+  if (typeof value !== 'string' && typeof value !== 'number') return '';
+  const str = String(value);
+  // Constrain by input element type: date inputs get ISO-date validation,
+  // numeric inputs get numeric coercion.
+  const el = document.getElementById(id);
+  if (!el) return '';
+  if (el.type === 'date') return ISO_DATE_RE.test(str) ? str : '';
+  if (el.type === 'number') {
+    const n = Number(str);
+    return Number.isFinite(n) ? String(n) : '';
+  }
+  // Fallback for any future string inputs: strip control chars and cap length.
+  return str.replace(/[\u0000-\u001F\u007F]/g, '').slice(0, 256);
+}
+
+function restoreState(state) {
+  if (!state || typeof state !== 'object' || !Array.isArray(state.dataPoints)) return false;
+  ids.hasPartner.checked = Boolean(state.hasPartner);
+  if (ALLOWED_FREQS.has(state.frequency)) {
+    const freqInput = document.querySelector(`input[name="freq"][value="${state.frequency}"]`);
+    if (freqInput) freqInput.checked = true;
+  }
+
+  const values = (state.values && typeof state.values === 'object') ? state.values : {};
   if (!values.u1Dob && values.u1Age) {
     values.u1Dob = `${new Date().getFullYear() - Number(values.u1Age)}-01-01`;
   }
   if (!values.u2Dob && values.u2Age) {
     values.u2Dob = `${new Date().getFullYear() - Number(values.u2Age)}-01-01`;
   }
-  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'].forEach((id) => {
-    if (values[id] !== undefined) document.getElementById(id).value = values[id];
+  STATE_INPUT_IDS.forEach((id) => {
+    if (values[id] === undefined) return;
+    const sanitized = sanitizeInputValue(id, values[id]);
+    if (sanitized !== '') document.getElementById(id).value = sanitized;
   });
 
-  dataPoints = state.dataPoints.map((p) => ({
-    id: p.id || String(Date.now() + Math.random()),
-    date: (p.date || todayStr()).slice(0, 10),
-    u1p: p.u1p ?? '',
-    u1i: p.u1i ?? '',
-    u2p: p.u2p ?? '',
-    u2i: p.u2i ?? ''
-  }));
+  dataPoints = state.dataPoints
+    .filter((p) => p && typeof p === 'object')
+    .map((p) => ({
+      id: sanitizeId(p.id),
+      date: sanitizeDate(p.date),
+      u1p: sanitizeAmount(p.u1p),
+      u1i: sanitizeAmount(p.u1i),
+      u2p: sanitizeAmount(p.u2p),
+      u2i: sanitizeAmount(p.u2i)
+    }));
 
-  if (!dataPoints.length) dataPoints = [{ id: String(Date.now()), date: todayStr(), u1p: '', u1i: '', u2p: '', u2i: '' }];
+  if (!dataPoints.length) dataPoints = [{ id: sanitizeId(), date: todayStr(), u1p: '', u1i: '', u2p: '', u2i: '' }];
   return true;
 }
 
@@ -343,9 +422,6 @@ function resetPlan() {
   window.location.reload();
 }
 
-window.updatePoint = updatePoint;
-window.removePoint = removePoint;
-
 function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -365,7 +441,7 @@ function init() {
 
   ids.hasPartner.addEventListener('change', recalc);
   document.querySelectorAll('input[name="freq"]').forEach((r) => r.addEventListener('change', recalc));
-  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  STATE_INPUT_IDS.forEach((id) => {
     document.getElementById(id).addEventListener('input', recalc);
   });
 
