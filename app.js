@@ -108,11 +108,8 @@ function renderTable() {
     });
 }
 
-function projectValue(current, monthlyContrib, annualGrowthRate, annualInflationRate, monthsToRetire) {
-  const annualGrowthDecimal = annualGrowthRate / 100;
-  const annualInflationDecimal = annualInflationRate / 100;
-  const realAnnualRate = (1 + annualGrowthDecimal) / (1 + annualInflationDecimal) - 1;
-  const monthlyRate = realAnnualRate / 12;
+function projectValue(current, monthlyContrib, annualGrowthRate, monthsToRetire) {
+  const monthlyRate = annualGrowthRate / 100 / 12;
   let value = current;
   for (let i = 0; i < monthsToRetire; i += 1) {
     value = value * (1 + monthlyRate) + monthlyContrib;
@@ -144,15 +141,17 @@ function recalc() {
   const sorted = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
   const current = sorted.length ? rowTotal(sorted[sorted.length - 1], hp) : 0;
 
-  const projected = monthsToRetire > 0 ? projectValue(current, contrib, growth, inflation, monthsToRetire) : current;
+  const projected = monthsToRetire > 0 ? projectValue(current, contrib, growth, monthsToRetire) : current;
   const progressPct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
-  const retirementIncome = (projected * (swr / 100)) / 12;
+  const retirementIncomeNominal = (projected * (swr / 100)) / 12;
+  const inflationFactor = Math.pow(1 + (inflation / 100), yearsToRetire);
+  const retirementIncome = inflationFactor > 0 ? retirementIncomeNominal / inflationFactor : retirementIncomeNominal;
 
   ids.metricsGrid.innerHTML = `
     <article class="metric"><div class="mlabel">Current total</div><div class="mval">${fmtGBP(current)}</div><div class="msub">${progressPct.toFixed(1)}% of target</div></article>
-    <article class="metric"><div class="mlabel">Projected at retirement (today's money)</div><div class="mval">${fmtGBP(projected)}</div><div class="msub">Based on ${fmtGBP(contrib)}/mo @ ${growth.toFixed(1)}% growth and ${inflation.toFixed(1)}% inflation</div></article>
+    <article class="metric"><div class="mlabel">Projected at retirement</div><div class="mval">${fmtGBP(projected)}</div><div class="msub">Based on ${fmtGBP(contrib)}/mo @ ${growth.toFixed(1)}% growth</div></article>
     <article class="metric"><div class="mlabel">Years to retirement</div><div class="mval">${yearsToRetire.toFixed(1)}</div><div class="msub">Earliest selected retirement age</div></article>
-    <article class="metric"><div class="mlabel">Est. monthly drawdown (today's money)</div><div class="mval">${fmtGBP(retirementIncome)}</div><div class="msub">Using ${swr.toFixed(1)}% safe withdrawal rate</div></article>
+    <article class="metric"><div class="mlabel">Est. monthly drawdown (today's money)</div><div class="mval">${fmtGBP(retirementIncome)}</div><div class="msub">Using ${swr.toFixed(1)}% safe withdrawal rate and ${inflation.toFixed(1)}% inflation</div></article>
   `;
 
   const shortfall = Math.max(0, target - projected);
@@ -171,11 +170,11 @@ function recalc() {
     </section>
   `;
 
-  drawChart(sorted, hp, target, contrib, growth, inflation, monthsToRetire);
+  drawChart(sorted, hp, target, contrib, growth, monthsToRetire);
   persist();
 }
 
-function drawChart(sorted, hp, target, contrib, growth, inflation, monthsToRetire) {
+function drawChart(sorted, hp, target, contrib, growth, monthsToRetire) {
   const labels = sorted.map((p) => formatDateLabel(p.date));
   const u1p = sorted.map((p) => parseFloat(p.u1p) || 0);
   const u1i = sorted.map((p) => parseFloat(p.u1i) || 0);
@@ -189,7 +188,7 @@ function drawChart(sorted, hp, target, contrib, growth, inflation, monthsToRetir
   if (sorted.length > 0 && projectionPoints > 0) {
     let running = total[total.length - 1];
     for (let i = 0; i < projectionPoints; i += 1) {
-      running = projectValue(running, contrib, growth, inflation, projectionStepMonths);
+      running = projectValue(running, contrib, growth, projectionStepMonths);
       projectedSeries.push(Math.round(running));
     }
   }
