@@ -136,7 +136,9 @@ function recalc() {
   const u1Years = Math.max(0, getNum('u1RetAge') - u1Age);
   const u2Years = hp ? Math.max(0, getNum('u2RetAge') - u2Age) : Infinity;
   const yearsToRetire = Math.min(u1Years, u2Years);
+  const latestYearsToRetire = hp ? Math.max(u1Years, u2Years) : u1Years;
   const monthsToRetire = Math.round(yearsToRetire * 12);
+  const projectionMonths = Math.round((latestYearsToRetire + 5) * 12);
 
   const sorted = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
   const current = sorted.length ? rowTotal(sorted[sorted.length - 1], hp) : 0;
@@ -170,11 +172,11 @@ function recalc() {
     </section>
   `;
 
-  drawChart(sorted, hp, target, contrib, growth, monthsToRetire);
+  drawChart(sorted, hp, target, contrib, growth, projectionMonths);
   persist();
 }
 
-function drawChart(sorted, hp, target, contrib, growth, monthsToRetire) {
+function drawChart(sorted, hp, target, contrib, growth, projectionMonths) {
   const labels = sorted.map((p) => formatDateLabel(p.date));
   const u1p = sorted.map((p) => parseFloat(p.u1p) || 0);
   const u1i = sorted.map((p) => parseFloat(p.u1i) || 0);
@@ -183,7 +185,7 @@ function drawChart(sorted, hp, target, contrib, growth, monthsToRetire) {
   const total = sorted.map((p) => rowTotal(p, hp));
 
   const projectionStepMonths = getFreq() === 'yearly' ? 12 : 3;
-  const projectionPoints = Math.max(0, Math.ceil(monthsToRetire / projectionStepMonths));
+  const projectionPoints = Math.max(0, Math.ceil(projectionMonths / projectionStepMonths));
   let projectedSeries = [];
   if (sorted.length > 0 && projectionPoints > 0) {
     let running = total[total.length - 1];
