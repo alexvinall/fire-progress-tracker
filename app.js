@@ -49,6 +49,14 @@ function getAgeFromDob(dobStr) {
   if (!hasBirthdayPassed) age -= 1;
   return Math.max(0, age);
 }
+function getRetirementDate(dobStr, retirementAge) {
+  if (!dobStr || !retirementAge) return null;
+  const dob = new Date(dobStr);
+  if (Number.isNaN(dob.getTime())) return null;
+  const retirementDate = new Date(dob);
+  retirementDate.setFullYear(retirementDate.getFullYear() + retirementAge);
+  return retirementDate.toISOString().split('T')[0];
+}
 function addMonths(dateStr, months) {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + months);
@@ -135,6 +143,8 @@ function recalc() {
 
   const u1Years = Math.max(0, getNum('u1RetAge') - u1Age);
   const u2Years = hp ? Math.max(0, getNum('u2RetAge') - u2Age) : Infinity;
+  const u1RetirementDate = getRetirementDate(document.getElementById('u1Dob').value, getNum('u1RetAge'));
+  const u2RetirementDate = hp ? getRetirementDate(document.getElementById('u2Dob').value, getNum('u2RetAge')) : null;
   const yearsToRetire = Math.min(u1Years, u2Years);
   const latestYearsToRetire = hp ? Math.max(u1Years, u2Years) : u1Years;
   const monthsToRetire = Math.round(yearsToRetire * 12);
@@ -172,11 +182,11 @@ function recalc() {
     </section>
   `;
 
-  drawChart(sorted, hp, target, contrib, growth, projectionMonths);
+  drawChart(sorted, hp, target, contrib, growth, projectionMonths, { u1RetirementDate, u2RetirementDate });
   persist();
 }
 
-function drawChart(sorted, hp, target, contrib, growth, projectionMonths) {
+function drawChart(sorted, hp, target, contrib, growth, projectionMonths, retirementMarkers) {
   const labels = sorted.map((p) => formatDateLabel(p.date));
   const u1p = sorted.map((p) => parseFloat(p.u1p) || 0);
   const u1i = sorted.map((p) => parseFloat(p.u1i) || 0);
@@ -197,7 +207,9 @@ function drawChart(sorted, hp, target, contrib, growth, projectionMonths) {
 
   const finalDate = sorted.length ? sorted[sorted.length - 1].date : todayStr();
   const projectionLabels = projectedSeries.map((_, i) => formatDateLabel(addMonths(finalDate, projectionStepMonths * (i + 1))));
+  const projectionDates = projectedSeries.map((_, i) => addMonths(finalDate, projectionStepMonths * (i + 1)));
   const allLabels = [...labels, ...projectionLabels];
+  const allDates = [...sorted.map((p) => p.date), ...projectionDates];
 
   const datasets = [
     { label: 'Your pension', data: [...u1p, ...Array(projectionLabels.length).fill(null)], borderColor: '#2f6fdb', tension: 0.2 },
@@ -224,16 +236,84 @@ function drawChart(sorted, hp, target, contrib, growth, projectionMonths) {
     datasets.push({ label: 'Target', data: Array(allLabels.length).fill(target), borderColor: '#e24b4a', borderDash: [6, 6], pointRadius: 0 });
   }
 
+  const retirementMarkerPlugin = {
+    id: 'retirementMarkers',
+    afterDraw(chartInstance, _args, options) {
+      const { ctx, chartArea, scales } = chartInstance;
+      const xScale = scales.x;
+      const markerItems = options?.markers || [];
+      const labelDates = options?.labelDates || [];
+      if (!xScale || !chartArea || markerItems.length === 0 || labelDates.length < 2) return;
+
+      const points = labelDates
+        .map((date, index) => ({ index, time: new Date(date).getTime() }))
+        .filter((point) => !Number.isNaN(point.time));
+      if (points.length < 2) return;
+
+      const firstTime = points[0].time;
+      const lastTime = points[points.length - 1].time;
+
+      markerItems.forEach((marker, markerIndex) => {
+        const markerTime = new Date(marker.date).getTime();
+        if (Number.isNaN(markerTime) || markerTime < firstTime || markerTime > lastTime) return;
+
+        let xPixel = null;
+        for (let i = 0; i < points.length - 1; i += 1) {
+          const left = points[i];
+          const right = points[i + 1];
+          if (markerTime < left.time || markerTime > right.time) continue;
+          const range = right.time - left.time;
+          const ratio = range === 0 ? 0 : (markerTime - left.time) / range;
+          const leftPixel = xScale.getPixelForValue(left.index);
+          const rightPixel = xScale.getPixelForValue(right.index);
+          xPixel = leftPixel + (rightPixel - leftPixel) * ratio;
+          break;
+        }
+        if (xPixel === null) return;
+
+        ctx.save();
+        ctx.strokeStyle = marker.color;
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(xPixel, chartArea.top);
+        ctx.lineTo(xPixel, chartArea.bottom);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.fillStyle = marker.color;
+        ctx.font = '12px Manrope, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        const labelX = Math.min(xPixel + 6, chartArea.right - 140);
+        const labelY = chartArea.top + 6 + markerIndex * 16;
+        ctx.fillText(marker.label, labelX, labelY);
+        ctx.restore();
+      });
+    }
+  };
+
+  const markers = [
+    retirementMarkers?.u1RetirementDate
+      ? { label: `Your retirement (${formatDateLabel(retirementMarkers.u1RetirementDate)})`, date: retirementMarkers.u1RetirementDate, color: '#2f6fdb' }
+      : null,
+    hp && retirementMarkers?.u2RetirementDate
+      ? { label: `Partner retirement (${formatDateLabel(retirementMarkers.u2RetirementDate)})`, date: retirementMarkers.u2RetirementDate, color: '#0f856a' }
+      : null
+  ].filter(Boolean);
+
   const ctx = document.getElementById('retChart').getContext('2d');
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
     data: { labels: allLabels, datasets },
+    plugins: [retirementMarkerPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
+        retirementMarkers: { markers, labelDates: allDates },
         legend: { position: 'bottom' },
         tooltip: { callbacks: { label: (ctx2) => `${ctx2.dataset.label}: ${fmtGBP(ctx2.parsed.y || 0)}` } }
       },
