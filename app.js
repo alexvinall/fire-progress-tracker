@@ -1,7 +1,31 @@
 const STORAGE_KEY = 'fire-progress-tracker-v1';
+const THEME_KEY = 'fire-tracker-theme';
 
 let dataPoints = [{ id: String(Date.now()), date: todayStr(), u1p: '', u1i: '', u2p: '', u2i: '' }];
 let chart;
+
+function getPreferredTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === 'dark' || stored === 'light') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if (btn) {
+    btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    btn.textContent = theme === 'dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+  recalc();
+}
 
 const ids = {
   hasPartner: document.getElementById('hasPartner'),
@@ -231,6 +255,9 @@ function recalc() {
 }
 
 function drawChart(sorted, hp, target, contrib, growth, projectionMonths, retirementMarkers) {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const tickColor = isDark ? '#9ba3b5' : '#4b566c';
   const labels = sorted.map((p) => formatDateLabel(p.date));
   const u1p = sorted.map((p) => parseFloat(p.u1p) || 0);
   const u1i = sorted.map((p) => parseFloat(p.u1i) || 0);
@@ -358,11 +385,12 @@ function drawChart(sorted, hp, target, contrib, growth, projectionMonths, retire
       interaction: { mode: 'index', intersect: false },
       plugins: {
         retirementMarkers: { markers, labelDates: allDates },
-        legend: { position: 'bottom' },
+        legend: { position: 'bottom', labels: { color: tickColor } },
         tooltip: { callbacks: { label: (ctx2) => `${ctx2.dataset.label}: ${fmtGBP(ctx2.parsed.y || 0)}` } }
       },
       scales: {
-        y: { ticks: { callback: (v) => fmtGBPShort(v) } }
+        y: { ticks: { callback: (v) => fmtGBPShort(v), color: tickColor }, grid: { color: gridColor } },
+        x: { ticks: { color: tickColor }, grid: { color: gridColor } }
       }
     }
   });
@@ -482,6 +510,8 @@ window.updatePoint = updatePoint;
 window.removePoint = removePoint;
 
 function init() {
+  applyTheme(getPreferredTheme());
+
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
@@ -496,12 +526,20 @@ function init() {
   document.getElementById('exportBtn').addEventListener('click', exportPlan);
   document.getElementById('importBtn').addEventListener('click', () => ids.fileIn.click());
   document.getElementById('resetBtn').addEventListener('click', resetPlan);
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
   ids.fileIn.addEventListener('change', importPlan);
 
   ids.hasPartner.addEventListener('change', recalc);
   document.querySelectorAll('input[name="freq"]').forEach((r) => r.addEventListener('change', recalc));
   ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'u1PensionContrib', 'u1IsaContrib', 'u2PensionContrib', 'u2IsaContrib', 'growthRate'].forEach((id) => {
     document.getElementById(id).addEventListener('input', recalc);
+  });
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (!localStorage.getItem(THEME_KEY)) {
+      applyTheme(getPreferredTheme());
+      recalc();
+    }
   });
 
   recalc();
