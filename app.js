@@ -208,9 +208,9 @@ function recalc() {
   const u2TargetAge = hp && targetDate ? getAgeOnDate(document.getElementById('u2Dob').value, targetDate) : null;
   let targetSolverText = 'Unable to reach the target with the current assumptions within 100 years.';
   if (targetDate) {
-    targetSolverText = `You reach your target and can FIRE on: <strong>${formatDateLabel(targetDate)}</strong>`;
-    if (u1TargetAge !== null) targetSolverText += ` (your age ${u1TargetAge})`;
-    if (hp && u2TargetAge !== null) targetSolverText += `, partner's age ${u2TargetAge}`;
+    targetSolverText = `<br>You reach your target and can FIRE on: <strong>${formatDateLabel(targetDate)}</strong>.`;
+    if (u1TargetAge !== null) targetSolverText += `<br> You'll be ${u1TargetAge}`;
+    if (hp && u2TargetAge !== null) targetSolverText += `, your partner will be ${u2TargetAge}`;
     targetSolverText += '.';
   }
 
@@ -221,8 +221,8 @@ function recalc() {
       <div class="analysis-row"><span>Projected gap</span><strong>${fmtGBP(shortfall)}</strong></div>
       <div class="analysis-row"><span>Needed extra monthly (simple)</span><strong>${fmtGBP(requiredMonthly)}</strong></div>
       ${projected >= target
-        ? `<div class="on-track">✅ You are on track based on the current assumptions. Estimated surplus at retirement: <strong>${fmtGBP(surplus)}</strong>. ${targetSolverText}</div>`
-        : `<div class="off-track">⚠️ You may miss your target. Estimated deficit at retirement: <strong>${fmtGBP(shortfall)}</strong>. Increase contributions or adjust timeline/target. ${targetSolverText}</div>`}
+        ? `<div class="on-track">✅<br>You are on track based on the current assumptions. Estimated surplus at retirement: <strong>${fmtGBP(surplus)}</strong>. ${targetSolverText}</div>`
+        : `<div class="off-track">⚠️<br>You may miss your target. Estimated deficit at retirement: <strong>${fmtGBP(shortfall)}</strong>. Increase contributions or adjust timeline/target. ${targetSolverText}</div>`}
     </section>
   `;
 
