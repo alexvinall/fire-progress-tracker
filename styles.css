@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f4f6fb;
   --bg-grad-start: #eef2fd;
   --bg-grad-end: #fafbff;
@@ -29,6 +30,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg: #13151a;
   --bg-grad-start: #161922;
   --bg-grad-end: #13151a;
@@ -125,6 +127,7 @@ fieldset {
   font-size: 1rem;
   font-family: inherit;
   background: var(--surface);
+  color: var(--text);
 }
 .field input:focus { outline: 3px solid var(--focus-ring); border-color: var(--focus-border); }
 .hint { font-size: .82rem; color: var(--text-soft); }
@@ -212,6 +215,8 @@ td input {
   padding: .45rem .55rem;
   font-size: .95rem;
   font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
 }
 td input:focus { outline: 3px solid var(--focus-ring); border-color: var(--focus-border); }
 
