@@ -38,6 +38,11 @@ function getFreq() {
 function getNum(id) {
   return Number.parseFloat(document.getElementById(id).value) || 0;
 }
+function getMonthlyContributionTotal() {
+  const ownContrib = getNum('u1PensionContrib') + getNum('u1IsaContrib');
+  if (!hasPartner()) return ownContrib;
+  return ownContrib + getNum('u2PensionContrib') + getNum('u2IsaContrib');
+}
 function getAgeFromDob(dobStr) {
   if (!dobStr) return 0;
   const dob = new Date(dobStr);
@@ -130,7 +135,7 @@ function recalc() {
 
   const hp = hasPartner();
   const target = getNum('target');
-  const contrib = getNum('monthlyContrib');
+  const contrib = getMonthlyContributionTotal();
   const growth = getNum('growthRate');
   const inflationField = document.getElementById('inflationRate').value;
   const inflation = inflationField === '' ? 3 : getNum('inflationRate');
@@ -337,7 +342,10 @@ function captureFormState() {
       target: document.getElementById('target').value,
       safeWithdrawal: document.getElementById('safeWithdrawal').value,
       inflationRate: document.getElementById('inflationRate').value,
-      monthlyContrib: document.getElementById('monthlyContrib').value,
+      u1PensionContrib: document.getElementById('u1PensionContrib').value,
+      u1IsaContrib: document.getElementById('u1IsaContrib').value,
+      u2PensionContrib: document.getElementById('u2PensionContrib').value,
+      u2IsaContrib: document.getElementById('u2IsaContrib').value,
       growthRate: document.getElementById('growthRate').value
     },
     dataPoints
@@ -357,7 +365,15 @@ function restoreState(state) {
   if (!values.u2Dob && values.u2Age) {
     values.u2Dob = `${new Date().getFullYear() - Number(values.u2Age)}-01-01`;
   }
-  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  if (values.monthlyContrib !== undefined && values.u1PensionContrib === undefined) {
+    const legacyContrib = Number(values.monthlyContrib) || 0;
+    values.u1PensionContrib = Math.round(legacyContrib * 0.6);
+    values.u1IsaContrib = legacyContrib - values.u1PensionContrib;
+    values.u2PensionContrib = 0;
+    values.u2IsaContrib = 0;
+  }
+
+  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'u1PensionContrib', 'u1IsaContrib', 'u2PensionContrib', 'u2IsaContrib', 'growthRate'].forEach((id) => {
     if (values[id] !== undefined) document.getElementById(id).value = values[id];
   });
 
@@ -445,7 +461,7 @@ function init() {
 
   ids.hasPartner.addEventListener('change', recalc);
   document.querySelectorAll('input[name="freq"]').forEach((r) => r.addEventListener('change', recalc));
-  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'monthlyContrib', 'growthRate'].forEach((id) => {
+  ['u1Dob', 'u1RetAge', 'u2Dob', 'u2RetAge', 'target', 'safeWithdrawal', 'inflationRate', 'u1PensionContrib', 'u1IsaContrib', 'u2PensionContrib', 'u2IsaContrib', 'growthRate'].forEach((id) => {
     document.getElementById(id).addEventListener('input', recalc);
   });
 
