@@ -6,6 +6,7 @@ let chart;
 const ids = {
   hasPartner: document.getElementById('hasPartner'),
   partnerBox: document.getElementById('partnerBox'),
+  partnerContribBox: document.getElementById('partnerContribBox'),
   thP2Pension: document.getElementById('th-p2pension'),
   thP2Isa: document.getElementById('th-p2isa'),
   dataTable: document.getElementById('dataTable'),
@@ -101,6 +102,7 @@ function renderTable() {
   ids.thP2Pension.classList.toggle('hidden', !hp);
   ids.thP2Isa.classList.toggle('hidden', !hp);
   ids.partnerBox.classList.toggle('hidden', !hp);
+  ids.partnerContribBox.classList.toggle('hidden', !hp);
 
   ids.dataTable.innerHTML = '';
 

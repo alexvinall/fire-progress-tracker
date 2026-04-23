@@ -81,23 +81,32 @@
       <h3 class="section-title">Projection assumptions</h3>
       <p class="section-sub">Estimate your future value based on contributions and annual growth.</p>
       <div class="grid2">
-        <div class="field">
-          <label for="u1PensionContrib">Your pension contribution (£/month)</label>
-          <input type="number" id="u1PensionContrib" value="750" min="0" step="50" />
+        <div class="panel">
+          <h3>You</h3>
+          <div class="field">
+            <label for="u1PensionContrib">Pension contribution (£/month)</label>
+            <input type="number" id="u1PensionContrib" value="750" min="0" step="50" />
+          </div>
+          <div class="field">
+            <label for="u1IsaContrib">ISA contribution (£/month)</label>
+            <input type="number" id="u1IsaContrib" value="450" min="0" step="50" />
+          </div>
         </div>
-        <div class="field">
-          <label for="u1IsaContrib">Your ISA contribution (£/month)</label>
-          <input type="number" id="u1IsaContrib" value="450" min="0" step="50" />
+
+        <div id="partnerContribBox" class="panel hidden">
+          <h3>Partner</h3>
+          <div class="field">
+            <label for="u2PensionContrib">Pension contribution (£/month)</label>
+            <input type="number" id="u2PensionContrib" value="200" min="0" step="50" />
+          </div>
+          <div class="field">
+            <label for="u2IsaContrib">ISA contribution (£/month)</label>
+            <input type="number" id="u2IsaContrib" value="100" min="0" step="50" />
+          </div>
         </div>
-        <div class="field">
-          <label for="u2PensionContrib">Partner pension contribution (£/month)</label>
-          <input type="number" id="u2PensionContrib" value="200" min="0" step="50" />
-        </div>
-        <div class="field">
-          <label for="u2IsaContrib">Partner ISA contribution (£/month)</label>
-          <input type="number" id="u2IsaContrib" value="100" min="0" step="50" />
-          <span class="hint">Total projected monthly contributions are split by account type.</span>
-        </div>
+      </div>
+      <p class="section-sub mt-md">Total projected monthly contributions are split by account type.</p>
+      <div class="grid2">
         <div class="field">
           <label for="growthRate">Expected annual growth (%)</label>
           <input type="number" id="growthRate" value="5" min="0" max="20" step="0.1" />
