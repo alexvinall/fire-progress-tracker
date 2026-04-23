@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FIRE Progress Tracker (UK)</title>
   <meta name="description" content="Track your pension and ISA progress towards financial independence and retirement." />
+  <script>
+    (function () {
+      var t = localStorage.getItem('fire-tracker-theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -24,6 +31,7 @@
           <p class="section-sub">Track your plan for one person or with a partner.</p>
         </div>
         <div class="toggle-row">
+          <button id="themeToggle" class="btn" type="button" aria-label="Switch to dark mode">🌙 Dark mode</button>
           <label for="hasPartner">Include partner</label>
           <label class="switch" aria-label="Include partner">
             <input type="checkbox" id="hasPartner" />
