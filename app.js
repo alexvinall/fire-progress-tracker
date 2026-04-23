@@ -208,9 +208,9 @@ function recalc() {
   const u2TargetAge = hp && targetDate ? getAgeOnDate(document.getElementById('u2Dob').value, targetDate) : null;
   let targetSolverText = 'Unable to reach the target with the current assumptions within 100 years.';
   if (targetDate) {
-    targetSolverText = `Earliest target date: <strong>${formatDateLabel(targetDate)}</strong>`;
-    if (u1TargetAge !== null) targetSolverText += ` (you age ${u1TargetAge})`;
-    if (hp && u2TargetAge !== null) targetSolverText += `, partner age ${u2TargetAge}`;
+    targetSolverText = `You reach your target and can FIRE on: <strong>${formatDateLabel(targetDate)}</strong>`;
+    if (u1TargetAge !== null) targetSolverText += ` (your age ${u1TargetAge})`;
+    if (hp && u2TargetAge !== null) targetSolverText += `, partner's age ${u2TargetAge}`;
     targetSolverText += '.';
   }
 
