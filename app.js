@@ -68,6 +68,18 @@ function addMonths(dateStr, months) {
   d.setMonth(d.getMonth() + months);
   return d.toISOString().split('T')[0];
 }
+function getAgeOnDate(dobStr, dateStr) {
+  if (!dobStr || !dateStr) return null;
+  const dob = new Date(dobStr);
+  const atDate = new Date(dateStr);
+  if (Number.isNaN(dob.getTime()) || Number.isNaN(atDate.getTime())) return null;
+
+  let age = atDate.getFullYear() - dob.getFullYear();
+  const monthDiff = atDate.getMonth() - dob.getMonth();
+  const hasBirthdayPassed = monthDiff > 0 || (monthDiff === 0 && atDate.getDate() >= dob.getDate());
+  if (!hasBirthdayPassed) age -= 1;
+  return Math.max(0, age);
+}
 
 function rowTotal(p, includePartner = hasPartner()) {
   const u1 = (parseFloat(p.u1p) || 0) + (parseFloat(p.u1i) || 0);
@@ -131,6 +143,20 @@ function projectValue(current, monthlyContrib, annualGrowthRate, monthsToRetire)
   }
   return value;
 }
+function solveMonthsToTarget(current, monthlyContrib, annualGrowthRate, target, maxMonths = 1200) {
+  if (target <= 0) return 0;
+  if (current >= target) return 0;
+
+  const monthlyRate = annualGrowthRate / 100 / 12;
+  if (monthlyContrib <= 0 && monthlyRate <= 0) return null;
+
+  let value = current;
+  for (let month = 1; month <= maxMonths; month += 1) {
+    value = value * (1 + monthlyRate) + monthlyContrib;
+    if (value >= target) return month;
+  }
+  return null;
+}
 
 function recalc() {
   renderTable();
@@ -176,6 +202,17 @@ function recalc() {
   const shortfall = Math.max(0, target - projected);
   const surplus = Math.max(0, projected - target);
   const requiredMonthly = yearsToRetire > 0 ? shortfall / (yearsToRetire * 12) : shortfall;
+  const monthsToTarget = solveMonthsToTarget(current, contrib, growth, target);
+  const targetDate = monthsToTarget === null ? null : addMonths(todayStr(), monthsToTarget);
+  const u1TargetAge = targetDate ? getAgeOnDate(document.getElementById('u1Dob').value, targetDate) : null;
+  const u2TargetAge = hp && targetDate ? getAgeOnDate(document.getElementById('u2Dob').value, targetDate) : null;
+  let targetSolverText = 'Unable to reach the target with the current assumptions within 100 years.';
+  if (targetDate) {
+    targetSolverText = `Earliest target date: <strong>${formatDateLabel(targetDate)}</strong>`;
+    if (u1TargetAge !== null) targetSolverText += ` (you age ${u1TargetAge})`;
+    if (hp && u2TargetAge !== null) targetSolverText += `, partner age ${u2TargetAge}`;
+    targetSolverText += '.';
+  }
 
   ids.analysisBox.innerHTML = `
     <section class="analysis">
@@ -184,8 +221,8 @@ function recalc() {
       <div class="analysis-row"><span>Projected gap</span><strong>${fmtGBP(shortfall)}</strong></div>
       <div class="analysis-row"><span>Needed extra monthly (simple)</span><strong>${fmtGBP(requiredMonthly)}</strong></div>
       ${projected >= target
-        ? `<div class="on-track">✅ You are on track based on the current assumptions. Estimated surplus at retirement: <strong>${fmtGBP(surplus)}</strong>.</div>`
-        : `<div class="off-track">⚠️ You may miss your target. Estimated deficit at retirement: <strong>${fmtGBP(shortfall)}</strong>. Increase contributions or adjust timeline/target.</div>`}
+        ? `<div class="on-track">✅ You are on track based on the current assumptions. Estimated surplus at retirement: <strong>${fmtGBP(surplus)}</strong>. ${targetSolverText}</div>`
+        : `<div class="off-track">⚠️ You may miss your target. Estimated deficit at retirement: <strong>${fmtGBP(shortfall)}</strong>. Increase contributions or adjust timeline/target. ${targetSolverText}</div>`}
     </section>
   `;
 
