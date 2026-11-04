@@ -3,6 +3,20 @@ const THEME_KEY = 'fire-tracker-theme';
 
 let dataPoints = [{ id: String(Date.now()), date: todayStr(), u1p: '', u1i: '', u2p: '', u2i: '' }];
 let chart;
+let chartView = 'total';
+let chartRange = 'all';
+
+const CHART_COLORS = {
+  pension: '#0072B2',
+  isa: '#E69F00',
+  you: '#0072B2',
+  youIsa: '#56B4E9',
+  partner: '#CC79A7',
+  partnerIsa: '#8E3B6B',
+  projection: '#009E73',
+  target: '#D55E00'
+};
+const PROJECTION_RANGE_PCT = 2;
 
 function getPreferredTheme() {
   const stored = localStorage.getItem(THEME_KEY);
@@ -54,6 +68,11 @@ function fmtGBPShort(n) {
 function fmtGBP(n) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(Math.max(0, n || 0));
 }
+function fmtSignedGBP(n) {
+  const rounded = Math.round(n || 0);
+  if (rounded === 0) return fmtGBP(0);
+  return `${rounded > 0 ? '+' : '−'}${fmtGBP(Math.abs(rounded))}`;
+}
 function hasPartner() {
   return ids.hasPartner.checked;
 }
@@ -91,6 +110,17 @@ function addMonths(dateStr, months) {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + months);
   return d.toISOString().split('T')[0];
+}
+function toYear(dateStr) {
+  const d = new Date(dateStr);
+  const y = d.getUTCFullYear();
+  const start = Date.UTC(y, 0, 1);
+  return y + (d.getTime() - start) / (Date.UTC(y + 1, 0, 1) - start);
+}
+function fromYear(value) {
+  const y = Math.floor(value);
+  const start = Date.UTC(y, 0, 1);
+  return new Date(start + (value - y) * (Date.UTC(y + 1, 0, 1) - start));
 }
 function getAgeOnDate(dobStr, dateStr) {
   if (!dobStr || !dateStr) return null;
@@ -202,12 +232,20 @@ function recalc() {
   const u2Years = hp ? Math.max(0, getNum('u2RetAge') - u2Age) : Infinity;
   const u1RetirementDate = getRetirementDate(document.getElementById('u1Dob').value, getNum('u1RetAge'));
   const u2RetirementDate = hp ? getRetirementDate(document.getElementById('u2Dob').value, getNum('u2RetAge')) : null;
-  const yearsToRetire = Math.min(u1Years, u2Years);
+  const ageBasedYearsToRetire = Math.min(u1Years, u2Years);
   const latestYearsToRetire = hp ? Math.max(u1Years, u2Years) : u1Years;
-  const monthsToRetire = Math.round(yearsToRetire * 12);
-  const projectionMonths = Math.round((latestYearsToRetire + 5) * 12);
 
   const sorted = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const validDates = sorted.map((p) => p.date).filter((d) => !Number.isNaN(new Date(d).getTime()));
+  const anchorDate = validDates.length ? validDates[validDates.length - 1] : todayStr();
+  const monthsFromAnchor = (dateStr, fallbackYears) => (dateStr
+    ? Math.max(0, Math.round((toYear(dateStr) - toYear(anchorDate)) * 12))
+    : Math.round(fallbackYears * 12));
+  const retirementDates = [u1RetirementDate, hp ? u2RetirementDate : null].filter(Boolean).sort();
+  const monthsToRetire = monthsFromAnchor(retirementDates[0], ageBasedYearsToRetire);
+  const yearsToRetire = monthsToRetire / 12;
+  const projectionMonths = monthsFromAnchor(retirementDates[retirementDates.length - 1], latestYearsToRetire) + 60;
+
   const current = sorted.length ? rowTotal(sorted[sorted.length - 1], hp) : 0;
 
   const projected = monthsToRetire > 0 ? projectValue(current, contrib, growth, monthsToRetire) : current;
@@ -219,7 +257,7 @@ function recalc() {
   ids.metricsGrid.innerHTML = `
     <article class="metric"><div class="mlabel">Current total</div><div class="mval">${fmtGBP(current)}</div><div class="msub">${progressPct.toFixed(1)}% of target</div></article>
     <article class="metric"><div class="mlabel">Projected at retirement</div><div class="mval">${fmtGBP(projected)}</div><div class="msub">Based on ${fmtGBP(contrib)}/mo @ ${growth.toFixed(1)}% growth</div></article>
-    <article class="metric"><div class="mlabel">Years to retirement</div><div class="mval">${yearsToRetire.toFixed(1)}</div><div class="msub">Earliest selected retirement age</div></article>
+    <article class="metric"><div class="mlabel">Years to retirement</div><div class="mval">${yearsToRetire.toFixed(1)}</div><div class="msub">Earliest retirement, from latest snapshot</div></article>
     <article class="metric"><div class="mlabel">Est. monthly drawdown (today's money)</div><div class="mval">${fmtGBP(retirementIncome)}</div><div class="msub">Using ${swr.toFixed(1)}% safe withdrawal rate and ${inflation.toFixed(1)}% inflation</div></article>
   `;
 
@@ -227,7 +265,7 @@ function recalc() {
   const surplus = Math.max(0, projected - target);
   const requiredMonthly = yearsToRetire > 0 ? shortfall / (yearsToRetire * 12) : shortfall;
   const monthsToTarget = solveMonthsToTarget(current, contrib, growth, target);
-  const targetDate = monthsToTarget === null ? null : addMonths(todayStr(), monthsToTarget);
+  const targetDate = monthsToTarget === null ? null : addMonths(anchorDate, monthsToTarget);
   const u1TargetAge = targetDate ? getAgeOnDate(document.getElementById('u1Dob').value, targetDate) : null;
   const u2TargetAge = hp && targetDate ? getAgeOnDate(document.getElementById('u2Dob').value, targetDate) : null;
   let targetSolverText = 'Unable to reach the target with the current assumptions within 100 years.';
@@ -242,155 +280,361 @@ function recalc() {
     <section class="analysis">
       <h3 class="section-title">Analysis</h3>
       <div class="analysis-row"><span>Target fund</span><strong>${fmtGBP(target)}</strong></div>
-      <div class="analysis-row"><span>Projected gap</span><strong>${fmtGBP(shortfall)}</strong></div>
-      <div class="analysis-row"><span>Needed extra monthly (simple)</span><strong>${fmtGBP(requiredMonthly)}</strong></div>
+      <div class="analysis-row"><span>Projected shortfall / surplus</span><strong class="${projected >= target ? 'amount-positive' : 'amount-negative'}">${fmtSignedGBP(projected - target)}</strong></div>
+      <div class="analysis-row"><span>Additional monthly contribution needed to make up shortfall (simple)</span><strong>${fmtGBP(requiredMonthly)}</strong></div>
       ${projected >= target
         ? `<div class="on-track">✅<br>You are on track based on the current assumptions. Estimated surplus at retirement: <strong>${fmtGBP(surplus)}</strong>. ${targetSolverText}</div>`
         : `<div class="off-track">⚠️<br>You may miss your target. Estimated deficit at retirement: <strong>${fmtGBP(shortfall)}</strong>. Increase contributions or adjust timeline/target. ${targetSolverText}</div>`}
     </section>
   `;
 
-  drawChart(sorted, hp, target, contrib, growth, projectionMonths, { u1RetirementDate, u2RetirementDate });
+  drawChart(sorted, hp, target, contrib, growth, projectionMonths, {
+    u1RetirementDate,
+    u2RetirementDate,
+    targetDate: monthsToTarget > 0 ? targetDate : null,
+    progressPct,
+    projected
+  });
   persist();
 }
 
-function drawChart(sorted, hp, target, contrib, growth, projectionMonths, retirementMarkers) {
+function drawChartLabel(ctx, text, x, y, { color, bg, maxRight }) {
+  ctx.font = '600 12px Manrope, sans-serif';
+  const w = ctx.measureText(text).width;
+  let left = x + 6;
+  if (left + w + 4 > maxRight) left = x - w - 6;
+  ctx.fillStyle = bg;
+  ctx.fillRect(left - 4, y - 2, w + 8, 18);
+  ctx.fillStyle = color;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillText(text, left, y);
+}
+
+const annotationPlugin = {
+  id: 'fireAnnotations',
+  afterDraw(chartInstance, _args, options) {
+    const { ctx, chartArea, scales } = chartInstance;
+    const { x: xScale, y: yScale } = scales;
+    if (!options || !chartArea || !xScale || !yScale) return;
+    const label = { color: options.textColor, bg: options.labelBg, maxRight: chartArea.right };
+
+    ctx.save();
+    if (options.target) {
+      const yPx = yScale.getPixelForValue(options.target.value);
+      if (yPx >= chartArea.top && yPx <= chartArea.bottom) {
+        const labelY = yPx - 22 < chartArea.top ? yPx + 4 : yPx - 22;
+        drawChartLabel(ctx, options.target.label, chartArea.left, labelY, { ...label, color: CHART_COLORS.target });
+      }
+    }
+
+    if (options.today && options.today.x >= xScale.min && options.today.x <= xScale.max) {
+      const xPx = xScale.getPixelForValue(options.today.x);
+      ctx.strokeStyle = options.textColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xPx, chartArea.top);
+      ctx.lineTo(xPx, chartArea.bottom);
+      ctx.stroke();
+      drawChartLabel(ctx, options.today.label, xPx, chartArea.bottom - 22, label);
+    }
+
+    let row = 0;
+    (options.markers || []).forEach((marker) => {
+      if (marker.x < xScale.min || marker.x > xScale.max) return;
+      const xPx = xScale.getPixelForValue(marker.x);
+      ctx.strokeStyle = options.mutedColor;
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(xPx, chartArea.top);
+      ctx.lineTo(xPx, chartArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawChartLabel(ctx, marker.label, xPx, chartArea.top + 6 + row * 22, label);
+      row += 1;
+    });
+
+    const fire = options.fire;
+    if (fire && fire.x >= xScale.min && fire.x <= xScale.max) {
+      const xPx = xScale.getPixelForValue(fire.x);
+      const yPx = yScale.getPixelForValue(fire.y);
+      ctx.beginPath();
+      ctx.arc(xPx, yPx, 7, 0, Math.PI * 2);
+      ctx.fillStyle = CHART_COLORS.projection;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = options.labelBg;
+      ctx.stroke();
+      drawChartLabel(ctx, fire.label, xPx, yPx + 10, { ...label, color: CHART_COLORS.projection });
+    }
+    ctx.restore();
+  }
+};
+
+function drawChart(allPoints, hp, target, contrib, growth, projectionMonths, extras) {
+  const sorted = allPoints.filter((p) => !Number.isNaN(new Date(p.date).getTime()));
+  if (!sorted.length) {
+    if (chart) chart.destroy();
+    chart = undefined;
+    return;
+  }
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
   const tickColor = isDark ? '#9ba3b5' : '#4b566c';
-  const labels = sorted.map((p) => formatDateLabel(p.date));
-  const u1p = sorted.map((p) => parseFloat(p.u1p) || 0);
-  const u1i = sorted.map((p) => parseFloat(p.u1i) || 0);
-  const u2p = sorted.map((p) => parseFloat(p.u2p) || 0);
-  const u2i = sorted.map((p) => parseFloat(p.u2i) || 0);
-  const total = sorted.map((p) => rowTotal(p, hp));
+  const textColor = isDark ? '#e4e6eb' : '#13151a';
+  const surfaceColor = isDark ? '#1e2028' : '#ffffff';
 
-  const projectionStepMonths = getFreq() === 'yearly' ? 12 : 3;
-  const projectionPoints = Math.max(0, Math.ceil(projectionMonths / projectionStepMonths));
-  let projectedSeries = [];
-  if (sorted.length > 0 && projectionPoints > 0) {
-    let running = total[total.length - 1];
-    for (let i = 0; i < projectionPoints; i += 1) {
-      running = projectValue(running, contrib, growth, projectionStepMonths);
-      projectedSeries.push(Math.round(running));
-    }
+  document.getElementById('chartViewPerson').classList.toggle('hidden', !hp);
+  document.getElementById('chartViewBoth').classList.toggle('hidden', !hp);
+  if (!hp && (chartView === 'person' || chartView === 'both')) {
+    chartView = 'account';
+    document.querySelector('input[name="chartView"][value="account"]').checked = true;
   }
 
-  const finalDate = sorted.length ? sorted[sorted.length - 1].date : todayStr();
-  const projectionLabels = projectedSeries.map((_, i) => formatDateLabel(addMonths(finalDate, projectionStepMonths * (i + 1))));
-  const projectionDates = projectedSeries.map((_, i) => addMonths(finalDate, projectionStepMonths * (i + 1)));
-  const allLabels = [...labels, ...projectionLabels];
-  const allDates = [...sorted.map((p) => p.date), ...projectionDates];
+  const num = (v) => parseFloat(v) || 0;
+  const totals = sorted.map((p) => rowTotal(p, hp));
+  const n = sorted.length;
+  const lastTotal = totals[n - 1];
 
-  const datasets = [
-    { label: 'Your pension', data: [...u1p, ...Array(projectionLabels.length).fill(null)], borderColor: '#2f6fdb', tension: 0.2 },
-    { label: 'Your ISA', data: [...u1i, ...Array(projectionLabels.length).fill(null)], borderColor: '#7255cf', tension: 0.2 }
-  ];
-  if (hp) {
-    datasets.push({ label: 'Partner pension', data: [...u2p, ...Array(projectionLabels.length).fill(null)], borderColor: '#0f856a', tension: 0.2 });
-    datasets.push({ label: 'Partner ISA', data: [...u2i, ...Array(projectionLabels.length).fill(null)], borderColor: '#d46a2f', tension: 0.2 });
+  const stepMonths = 3;
+  const projCount = Math.max(0, Math.ceil(projectionMonths / stepMonths));
+  const lastDate = sorted[n - 1].date;
+  const projDates = Array.from({ length: projCount }, (_, i) => addMonths(lastDate, stepMonths * (i + 1)));
+  const gridDates = [...sorted.map((p) => p.date), ...projDates];
+  const xs = gridDates.map(toYear);
+
+  const points = (snapshotValues, projectedValues) => xs.map((x, i) => {
+    const v = i < n ? snapshotValues[i] : (projectedValues ? projectedValues[i - n] : null);
+    return { x, y: v, v, date: gridDates[i] };
+  });
+  const projectSeries = (rate, start = lastTotal, monthly = contrib) => {
+    let value = start;
+    return projDates.map(() => { value = projectValue(value, monthly, rate, stepMonths); return value; });
+  };
+  const lead = Array(n).fill(null);
+  lead[n - 1] = lastTotal;
+
+  const datasets = [];
+
+  if (chartView !== 'total') {
+    const last = sorted[n - 1];
+    const component = (label, color, fields, contribIds) => ({
+      label,
+      color,
+      values: sorted.map((p) => fields.reduce((t, f) => t + num(p[f]), 0)),
+      start: fields.reduce((t, f) => t + num(last[f]), 0),
+      monthly: contribIds.reduce((t, id) => t + getNum(id), 0)
+    });
+    const components = {
+      person: () => [
+        component('You', CHART_COLORS.you, ['u1p', 'u1i'], ['u1PensionContrib', 'u1IsaContrib']),
+        component('Partner', CHART_COLORS.partner, ['u2p', 'u2i'], ['u2PensionContrib', 'u2IsaContrib'])
+      ],
+      both: () => [
+        component('Your pension', CHART_COLORS.you, ['u1p'], ['u1PensionContrib']),
+        component('Your ISA', CHART_COLORS.youIsa, ['u1i'], ['u1IsaContrib']),
+        component('Partner pension', CHART_COLORS.partner, ['u2p'], ['u2PensionContrib']),
+        component('Partner ISA', CHART_COLORS.partnerIsa, ['u2i'], ['u2IsaContrib'])
+      ],
+      account: () => [
+        component('Pensions', CHART_COLORS.pension, hp ? ['u1p', 'u2p'] : ['u1p'], hp ? ['u1PensionContrib', 'u2PensionContrib'] : ['u1PensionContrib']),
+        component('ISAs', CHART_COLORS.isa, hp ? ['u1i', 'u2i'] : ['u1i'], hp ? ['u1IsaContrib', 'u2IsaContrib'] : ['u1IsaContrib'])
+      ]
+    }[chartView]();
+    const running = Array(xs.length).fill(0);
+    components.forEach((c, idx) => {
+      const projected = projectSeries(growth, c.start, c.monthly);
+      const data = xs.map((x, i) => {
+        const v = i < n ? c.values[i] : projected[i - n];
+        running[i] += v;
+        return { x, y: running[i], v, date: gridDates[i] };
+      });
+      datasets.push({
+        label: c.label,
+        data,
+        borderColor: c.color,
+        backgroundColor: `${c.color}99`,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        segment: { borderDash: (ctx) => (ctx.p0DataIndex >= n - 1 ? [6, 4] : undefined) },
+        fill: idx === 0 ? 'origin' : '-1',
+        order: 5
+      });
+    });
   }
-  datasets.push({ label: 'Total', data: [...total, ...Array(projectionLabels.length).fill(null)], borderColor: '#2f8f42', borderWidth: 3, tension: 0.2 });
 
-  if (projectedSeries.length) {
+  datasets.push({
+    label: 'Total',
+    data: points(totals),
+    borderColor: textColor,
+    backgroundColor: surfaceColor,
+    pointBackgroundColor: surfaceColor,
+    borderWidth: 2.5,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    tension: 0.15,
+    order: 1
+  });
+
+  let loIdx = -1;
+  let hiIdx = -1;
+  if (projCount > 0) {
+    const loRate = Math.max(0, growth - PROJECTION_RANGE_PCT);
+    const hiRate = growth + PROJECTION_RANGE_PCT;
     datasets.push({
       label: 'Projected total',
-      data: [...Array(total.length - 1).fill(null), total[total.length - 1], ...projectedSeries],
-      borderColor: '#f09a21',
+      data: points(lead, projectSeries(growth)),
+      borderColor: CHART_COLORS.projection,
       borderDash: [8, 4],
       borderWidth: 3,
-      tension: 0.2
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      isProjection: true,
+      order: 2
+    });
+    loIdx = datasets.length;
+    datasets.push({
+      label: 'Projection range (low)',
+      data: points(lead, projectSeries(loRate)),
+      borderWidth: 0,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      hideLegend: true,
+      hideTooltip: true,
+      order: 6
+    });
+    hiIdx = datasets.length;
+    datasets.push({
+      label: `Projection range (${loRate.toFixed(1)}%–${hiRate.toFixed(1)}% growth)`,
+      data: points(lead, projectSeries(hiRate)),
+      borderWidth: 0,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      backgroundColor: `${CHART_COLORS.projection}2e`,
+      fill: '-1',
+      hideTooltip: true,
+      order: 6
     });
   }
 
   if (target > 0) {
-    datasets.push({ label: 'Target', data: Array(allLabels.length).fill(target), borderColor: '#e24b4a', borderDash: [6, 6], pointRadius: 0 });
+    datasets.push({
+      label: 'Target',
+      data: xs.map((x, i) => ({ x, y: target, v: target, date: gridDates[i] })),
+      borderColor: CHART_COLORS.target,
+      borderDash: [6, 6],
+      borderWidth: 1.5,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      hideTooltip: true,
+      order: 3
+    });
   }
 
-  const retirementMarkerPlugin = {
-    id: 'retirementMarkers',
-    afterDraw(chartInstance, _args, options) {
-      const { ctx, chartArea, scales } = chartInstance;
-      const xScale = scales.x;
-      const markerItems = options?.markers || [];
-      const labelDates = options?.labelDates || [];
-      if (!xScale || !chartArea || markerItems.length === 0 || labelDates.length < 2) return;
-
-      const points = labelDates
-        .map((date, index) => ({ index, time: new Date(date).getTime() }))
-        .filter((point) => !Number.isNaN(point.time));
-      if (points.length < 2) return;
-
-      const firstTime = points[0].time;
-      const lastTime = points[points.length - 1].time;
-
-      markerItems.forEach((marker, markerIndex) => {
-        const markerTime = new Date(marker.date).getTime();
-        if (Number.isNaN(markerTime) || markerTime < firstTime || markerTime > lastTime) return;
-
-        let xPixel = null;
-        for (let i = 0; i < points.length - 1; i += 1) {
-          const left = points[i];
-          const right = points[i + 1];
-          if (markerTime < left.time || markerTime > right.time) continue;
-          const range = right.time - left.time;
-          const ratio = range === 0 ? 0 : (markerTime - left.time) / range;
-          const leftPixel = xScale.getPixelForValue(left.index);
-          const rightPixel = xScale.getPixelForValue(right.index);
-          xPixel = leftPixel + (rightPixel - leftPixel) * ratio;
-          break;
-        }
-        if (xPixel === null) return;
-
-        ctx.save();
-        ctx.strokeStyle = marker.color;
-        ctx.setLineDash([6, 6]);
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(xPixel, chartArea.top);
-        ctx.lineTo(xPixel, chartArea.bottom);
-        ctx.stroke();
-
-        ctx.setLineDash([]);
-        ctx.fillStyle = marker.color;
-        ctx.font = '12px Manrope, sans-serif';
-        ctx.textBaseline = 'top';
-        ctx.textAlign = 'left';
-        const labelX = Math.min(xPixel + 6, chartArea.right - 140);
-        const labelY = chartArea.top + 6 + markerIndex * 16;
-        ctx.fillText(marker.label, labelX, labelY);
-        ctx.restore();
-      });
-    }
-  };
-
-  const markers = [
-    retirementMarkers?.u1RetirementDate
-      ? { label: `Your retirement (${formatDateLabel(retirementMarkers.u1RetirementDate)})`, date: retirementMarkers.u1RetirementDate, color: '#2f6fdb' }
-      : null,
-    hp && retirementMarkers?.u2RetirementDate
-      ? { label: `Partner retirement (${formatDateLabel(retirementMarkers.u2RetirementDate)})`, date: retirementMarkers.u2RetirementDate, color: '#0f856a' }
-      : null
+  const retirementMarkers = [
+    extras.u1RetirementDate ? { label: `You retire · ${formatDateLabel(extras.u1RetirementDate)}`, x: toYear(extras.u1RetirementDate) } : null,
+    hp && extras.u2RetirementDate ? { label: `Partner retires · ${formatDateLabel(extras.u2RetirementDate)}`, x: toYear(extras.u2RetirementDate) } : null
   ].filter(Boolean);
 
-  const ctx = document.getElementById('retChart').getContext('2d');
+  let xMin;
+  let xMax;
+  if (chartRange === 'history') {
+    xMin = xs[0];
+    xMax = xs[n - 1];
+  } else if (chartRange === '5y') {
+    xMin = xs[0];
+    xMax = xs[n - 1] + 5;
+  } else if (chartRange === 'retire' && retirementMarkers.length) {
+    xMin = xs[0];
+    xMax = Math.max(...retirementMarkers.map((m) => m.x));
+  }
+  if (xMax !== undefined) xMax = Math.max(xMax, xMin + 0.5);
+
+  const ages = (dateStr) => {
+    const own = getAgeOnDate(document.getElementById('u1Dob').value, dateStr);
+    const partner = hp ? getAgeOnDate(document.getElementById('u2Dob').value, dateStr) : null;
+    if (own === null) return '';
+    return partner === null ? `Age ${own}` : `You ${own} · Partner ${partner}`;
+  };
+
+  const fireDate = extras.targetDate;
+  const canvas = document.getElementById('retChart');
+  canvas.setAttribute('aria-label', [
+    `Chart of fund value over time. Current total ${fmtGBP(lastTotal)}`,
+    target > 0 ? `, ${extras.progressPct.toFixed(0)}% of the ${fmtGBP(target)} target.` : '.',
+    projCount > 0 ? ` Projected ${fmtGBP(extras.projected)} at retirement.` : '',
+    fireDate ? ` Target reached around ${formatDateLabel(fireDate)}.` : ''
+  ].join(''));
+
   if (chart) chart.destroy();
-  chart = new Chart(ctx, {
+  chart = new Chart(canvas.getContext('2d'), {
     type: 'line',
-    data: { labels: allLabels, datasets },
-    plugins: [retirementMarkerPlugin],
+    data: { datasets },
+    plugins: [annotationPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      parsing: false,
+      animation: false,
       interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: 12 } },
       plugins: {
-        retirementMarkers: { markers, labelDates: allDates },
-        legend: { position: 'bottom', labels: { color: tickColor } },
-        tooltip: { callbacks: { label: (ctx2) => `${ctx2.dataset.label}: ${fmtGBP(ctx2.parsed.y || 0)}` } }
+        fireAnnotations: {
+          markers: retirementMarkers,
+          today: { x: toYear(todayStr()), label: `Today · ${formatDateLabel(todayStr())}` },
+          target: target > 0 ? { value: target, label: `Target ${fmtGBPShort(target)} · ${extras.progressPct.toFixed(0)}% reached` } : null,
+          fire: fireDate && target > 0 ? { x: toYear(fireDate), y: target, label: `Target reached · ${formatDateLabel(fireDate)}` } : null,
+          textColor,
+          mutedColor: tickColor,
+          labelBg: isDark ? 'rgba(30,32,40,0.85)' : 'rgba(255,255,255,0.85)'
+        },
+        legend: {
+          position: 'bottom',
+          labels: { color: tickColor, usePointStyle: true, filter: (item, data) => !data.datasets[item.datasetIndex].hideLegend }
+        },
+        tooltip: {
+          filter: (item) => !item.dataset.hideTooltip && item.raw && item.raw.v !== null && !(item.dataset.isProjection && item.dataIndex === n - 1),
+          callbacks: {
+            title: (items) => (items.length ? formatDateLabel(items[0].raw.date) : ''),
+            afterTitle: (items) => (items.length ? ages(items[0].raw.date) : ''),
+            label: (c) => `${c.dataset.label}: ${fmtGBP(c.raw.v)}`,
+            footer: (items) => {
+              const proj = items.find((item) => item.dataset.isProjection);
+              if (!proj || loIdx < 0) return '';
+              const lo = datasets[loIdx].data[proj.dataIndex].v;
+              const hi = datasets[hiIdx].data[proj.dataIndex].v;
+              return `Range: ${fmtGBP(lo)} – ${fmtGBP(hi)}`;
+            }
+          }
+        }
       },
       scales: {
-        y: { ticks: { callback: (v) => fmtGBPShort(v), color: tickColor }, grid: { color: gridColor } },
-        x: { ticks: { color: tickColor }, grid: { color: gridColor } }
+        y: { beginAtZero: true, ticks: { callback: (v) => fmtGBPShort(v), color: tickColor }, grid: { color: gridColor } },
+        x: {
+          type: 'linear',
+          bounds: 'data',
+          min: xMin,
+          max: xMax,
+          ticks: {
+            color: tickColor,
+            maxRotation: 0,
+            callback(value) {
+              if (this.max - this.min > 2) return String(Math.round(value));
+              return fromYear(value).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+            }
+          },
+          grid: { color: gridColor },
+          afterBuildTicks(scale) {
+            const span = scale.max - scale.min;
+            let step = span > 40 ? 10 : span > 20 ? 5 : span > 10 ? 2 : span > 2 ? 1 : 0.25;
+            if (scale.chart.width < 520 && step >= 1) step *= 2;
+            const ticks = [];
+            for (let v = Math.ceil(scale.min / step) * step; v <= scale.max + 1e-9; v += step) ticks.push({ value: v });
+            scale.ticks = ticks;
+          }
+        }
       }
     }
   });
@@ -528,6 +772,31 @@ function init() {
   document.getElementById('resetBtn').addEventListener('click', resetPlan);
   document.getElementById('themeToggle').addEventListener('click', toggleTheme);
   ids.fileIn.addEventListener('change', importPlan);
+
+  document.querySelectorAll('input[name="chartView"]').forEach((r) => r.addEventListener('change', () => {
+    chartView = r.value;
+    recalc();
+  }));
+  document.querySelectorAll('input[name="chartRange"]').forEach((r) => r.addEventListener('change', () => {
+    chartRange = r.value;
+    recalc();
+  }));
+  const chartCard = document.getElementById('chartCard');
+  const expandBtn = document.getElementById('chartExpandBtn');
+  const setExpanded = (expanded) => {
+    chartCard.classList.toggle('chart-expanded', expanded);
+    document.body.classList.toggle('no-scroll', expanded);
+    [...chartCard.parentElement.children].forEach((el) => {
+      if (el !== chartCard) el.inert = expanded;
+    });
+    expandBtn.setAttribute('aria-pressed', String(expanded));
+    expandBtn.textContent = expanded ? '✕ Close' : '⤢ Expand';
+    if (chart) chart.resize();
+  };
+  expandBtn.addEventListener('click', () => setExpanded(!chartCard.classList.contains('chart-expanded')));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && chartCard.classList.contains('chart-expanded')) setExpanded(false);
+  });
 
   ids.hasPartner.addEventListener('change', recalc);
   document.querySelectorAll('input[name="freq"]').forEach((r) => r.addEventListener('change', recalc));

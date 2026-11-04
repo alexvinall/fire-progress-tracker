@@ -123,6 +123,40 @@
       </div>
     </section>
 
+    <section class="card" aria-labelledby="projection-title">
+      <h2 id="projection-title" class="section-title">Retirement projections</h2>
+      <div class="grid4" id="metricsGrid"></div>
+    </section>
+
+    <section class="card" id="chartCard" aria-labelledby="chart-title">
+      <div class="row-between">
+        <h2 id="chart-title" class="section-title">Progress visualisation</h2>
+        <button class="btn" id="chartExpandBtn" type="button" aria-pressed="false">⤢ Expand</button>
+      </div>
+      <div class="chart-controls">
+        <fieldset>
+          <legend>View</legend>
+          <div class="radio-row">
+            <label class="radio-option"><input type="radio" name="chartView" value="total" checked /><span>Total</span></label>
+            <label class="radio-option"><input type="radio" name="chartView" value="account" /><span>By account</span></label>
+            <label class="radio-option" id="chartViewPerson"><input type="radio" name="chartView" value="person" /><span>By person</span></label>
+            <label class="radio-option" id="chartViewBoth"><input type="radio" name="chartView" value="both" /><span>By account and person</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Time range</legend>
+          <div class="radio-row">
+            <label class="radio-option"><input type="radio" name="chartRange" value="all" checked /><span>All</span></label>
+            <label class="radio-option"><input type="radio" name="chartRange" value="retire" /><span>To retirement</span></label>
+            <label class="radio-option"><input type="radio" name="chartRange" value="5y" /><span>Next 5 years</span></label>
+            <label class="radio-option"><input type="radio" name="chartRange" value="history" /><span>History only</span></label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="chart-wrap"><canvas id="retChart" role="img" aria-label="Chart of fund value over time"></canvas></div>
+      <div id="analysisBox"></div>
+    </section>
+
     <section class="card" aria-labelledby="values-title">
       <div class="row-between">
         <div>
@@ -148,17 +182,6 @@
           <tbody id="dataTable"></tbody>
         </table>
       </div>
-    </section>
-
-    <section class="card" aria-labelledby="chart-title">
-      <h2 id="chart-title" class="section-title">Progress visualisation</h2>
-      <div class="chart-wrap"><canvas id="retChart"></canvas></div>
-    </section>
-
-    <section class="card" aria-labelledby="projection-title">
-      <h2 id="projection-title" class="section-title">Retirement projections</h2>
-      <div class="grid4" id="metricsGrid"></div>
-      <div id="analysisBox"></div>
     </section>
 
     <section class="card" aria-labelledby="save-title">
