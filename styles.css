@@ -68,7 +68,7 @@ body {
   background: linear-gradient(170deg, var(--bg-grad-start) 0%, var(--bg-grad-end) 60%);
 }
 
-.page { max-width: 1040px; margin: 0 auto; padding: 1.2rem; }
+.page { max-width: 1160px; margin: 0 auto; padding: 1.2rem; }
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -132,7 +132,7 @@ fieldset {
 .field input:focus { outline: 3px solid var(--focus-ring); border-color: var(--focus-border); }
 .hint { font-size: .82rem; color: var(--text-soft); }
 
-.radio-row { display: flex; gap: .55rem; align-items: center; }
+.radio-row { display: flex; gap: .55rem; align-items: center; flex-wrap: wrap; }
 .radio-option {
   display: inline-flex;
   align-items: center;
@@ -232,13 +232,28 @@ td input:focus { outline: 3px solid var(--focus-ring); border-color: var(--focus
   margin-top: 1rem;
 }
 .analysis-row { display: flex; justify-content: space-between; gap: .6rem; font-size: .9rem; padding: .24rem 0; }
+.amount-positive { color: var(--success-text); }
+.amount-negative { color: var(--danger); }
 .on-track, .off-track {
   border-radius: 8px; padding: .58rem .68rem; margin-top: .68rem; font-size: .86rem;
 }
 .on-track { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success-text); }
 .off-track { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); }
 
-.chart-wrap { position: relative; height: 360px; }
+.chart-controls { display: flex; gap: .8rem; flex-wrap: wrap; margin: .3rem 0 .9rem; }
+.chart-wrap { position: relative; height: clamp(420px, 60vh, 700px); }
+#chartCard.chart-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  margin: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+#chartCard.chart-expanded .chart-wrap { flex: 1; height: auto; min-height: 320px; }
+body.no-scroll { overflow: hidden; }
 .footer { text-align: center; color: var(--text-soft); font-size: .82rem; margin: 1.4rem 0; }
 .divider { border: 0; border-top: 1px solid var(--border); margin: 1rem 0; }
 .mt-md { margin-top: .8rem; }
@@ -249,6 +264,7 @@ td input:focus { outline: 3px solid var(--focus-ring); border-color: var(--focus
 }
 @media (max-width: 640px) {
   .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
+  .chart-wrap { height: clamp(340px, 55vh, 480px); }
   .header h1 { font-size: 1.45rem; }
   .section-title { font-size: 1.35rem; }
 }
